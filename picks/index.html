@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dynasty Draft Picks</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <h1 id="league-name">Dynasty League</h1>
+      <p class="subtitle">Future draft pick tracker</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="controls" aria-label="Filters">
+      <label>Team
+        <select id="team-filter"><option value="">All teams</option></select>
+      </label>
+      <label>Season
+        <select id="season-filter"><option value="">All seasons</option></select>
+      </label>
+      <label class="check"><input type="checkbox" id="traded-only"> Traded picks only</label>
+    </section>
+
+    <section>
+      <h2>Pick ownership</h2>
+      <div id="summary" class="summary"></div>
+      <div class="table-scroll"><table id="grid" class="grid"></table></div>
+      <p class="legend"><span class="chip traded">Rd 1<small>from Team X</small></span> = pick acquired in a trade. <span class="chip lost"><s>Rd 2</s><small>to Team Y</small></span> = pick traded away. Hover over a pick to see its trade history. The startup draft has 53 rounds, enough to fill a 53-player roster; every draft after that is a 7-round rookie draft.</p>
+    </section>
+
+    <section>
+      <h2>Pick trade log</h2>
+      <div class="table-scroll"><table id="trades" class="list"></table></div>
+    </section>
+  </main>
+
+  <script src="data/league.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
