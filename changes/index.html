@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Repository changes · Roster</title>
+  <style>
+    :root {
+      --bg: #f7f7f5;
+      --panel: #ffffff;
+      --text: #1d1d1f;
+      --muted: #6b6b70;
+      --line: #e3e3e0;
+      --accent: #2f6fdb;
+      --code-bg: #f0f0ee;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #161618;
+        --panel: #1f1f22;
+        --text: #ecece9;
+        --muted: #9a9aa0;
+        --line: #2e2e33;
+        --accent: #7aa7ff;
+        --code-bg: #2a2a2e;
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #161618;
+      --panel: #1f1f22;
+      --text: #ecece9;
+      --muted: #9a9aa0;
+      --line: #2e2e33;
+      --accent: #7aa7ff;
+      --code-bg: #2a2a2e;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    .wrap {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 32px 16px 64px;
+    }
+    header h1 { font-size: 1.6rem; margin: 0 0 4px; }
+    header p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+    header a { color: var(--accent); }
+    .meta {
+      margin: 16px 0 24px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .day {
+      margin: 28px 0 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+    ul.commits {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    ul.commits li {
+      padding: 14px 16px;
+      border-top: 1px solid var(--line);
+    }
+    ul.commits li:first-child { border-top: none; }
+    .title {
+      font-weight: 600;
+      word-break: break-word;
+    }
+    .title a { color: var(--text); text-decoration: none; }
+    .title a:hover { text-decoration: underline; }
+    .body {
+      margin-top: 6px;
+      white-space: pre-wrap;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .info {
+      margin-top: 6px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 12px;
+    }
+    code {
+      font: 0.85em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: var(--code-bg);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+    .state {
+      padding: 24px 16px;
+      background: var(--panel);
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      color: var(--muted);
+      text-align: center;
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Repository changes</h1>
+      <p>Recent commits to <a id="repo-link" href="https://github.com/Elixizz/roster">Elixizz/roster</a></p>
+    </header>
+
+    <p id="meta" class="meta">Loading…</p>
+
+    <div id="state" class="state">Loading changes…</div>
+    <div id="feed"></div>
+  </div>
+
+  <script>
+    (function () {
+      var DATA_URL = "data/changes.json";
+      var stateEl = document.getElementById("state");
+      var feedEl = document.getElementById("feed");
+      var metaEl = document.getElementById("meta");
+
+      function esc(s) {
+        return String(s == null ? "" : s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function dayKey(iso) {
+        var d = new Date(iso);
+        return isNaN(d) ? "Unknown date" : d.toISOString().slice(0, 10);
+      }
+
+      function dayLabel(key) {
+        if (key === "Unknown date") return key;
+        var d = new Date(key + "T00:00:00Z");
+        return d.toLocaleDateString(undefined, {
+          weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC"
+        });
+      }
+
+      function timeLabel(iso) {
+        var d = new Date(iso);
+        return isNaN(d) ? "" : d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+      }
+
+      function render(data) {
+        var commits = data.commits || [];
+
+        var generated = data.generatedAt ? new Date(data.generatedAt) : null;
+        metaEl.textContent = commits.length + " commit" + (commits.length === 1 ? "" : "s") +
+          (generated && !isNaN(generated) ? " · updated " + generated.toLocaleString() : "");
+
+        if (data.repoUrl) {
+          document.getElementById("repo-link").href = data.repoUrl;
+          document.getElementById("repo-link").textContent = data.repo || data.repoUrl;
+        }
+
+        if (commits.length === 0) {
+          stateEl.textContent = data.emptyRepo
+            ? "The repository has no commits yet."
+            : "No changes to show.";
+          return;
+        }
+
+        stateEl.classList.add("hidden");
+
+        var groups = {};
+        var order = [];
+        commits.forEach(function (c) {
+          var key = dayKey(c.date);
+          if (!groups[key]) { groups[key] = []; order.push(key); }
+          groups[key].push(c);
+        });
+
+        var html = "";
+        order.forEach(function (key) {
+          html += '<div class="day">' + esc(dayLabel(key)) + "</div>";
+          html += '<ul class="commits">';
+          groups[key].forEach(function (c) {
+            var body = c.body ? '<div class="body">' + esc(c.body) + "</div>" : "";
+            html +=
+              "<li>" +
+                '<div class="title"><a href="' + esc(c.url) + '" target="_blank" rel="noopener">' +
+                  esc(c.title || "(no message)") +
+                "</a></div>" +
+                body +
+                '<div class="info">' +
+                  "<span>" + esc(c.author) + "</span>" +
+                  "<span>" + esc(timeLabel(c.date)) + "</span>" +
+                  '<span><code>' + esc(c.shortSha) + "</code></span>" +
+                "</div>" +
+              "</li>";
+          });
+          html += "</ul>";
+        });
+        feedEl.innerHTML = html;
+      }
+
+      fetch(DATA_URL, { cache: "no-cache" })
+        .then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.json();
+        })
+        .then(render)
+        .catch(function (err) {
+          metaEl.textContent = "";
+          stateEl.textContent = "Couldn't load the changes feed (" + err.message + ").";
+        });
+    })();
+  </script>
+</body>
+</html>
