@@ -1,8 +1,29 @@
 {
   "repo": "Elixizz/roster",
   "repoUrl": "https://github.com/Elixizz/roster",
-  "generatedAt": "1970-01-01T00:00:00.000Z",
-  "emptyRepo": true,
-  "count": 0,
-  "commits": []
+  "generatedAt": "2026-11-01T23:12:42.805Z",
+  "emptyRepo": false,
+  "count": 2,
+  "commits": [
+    {
+      "sha": "3964a78d1a4c26d4f3730121fdc5008e9df7c9e9",
+      "shortSha": "3964a78",
+      "title": "Add roster cover page",
+      "body": "Adds a simple landing page at the repo root with the headline\n\"Your team. Free agency.\" and buttons to the changes page and GitHub repo.\n\nCo-Authored-By: Claude Haiku 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01Npax7Ktj82GJtDRMWxd4hZ",
+      "author": "Claude",
+      "authorUrl": "https://github.com/claude",
+      "date": "2026-11-01T23:10:55Z",
+      "url": "https://github.com/Elixizz/roster/commit/3964a78d1a4c26d4f3730121fdc5008e9df7c9e9"
+    },
+    {
+      "sha": "d4ca9c8a91732d6ff02d4aa815bfd56b9fd29795",
+      "shortSha": "d4ca9c8",
+      "title": "Add repository changes page and feed builder",
+      "body": "Adds a static /changes page that lists recent commits to the repo,\ngrouped by day. A build script writes the data to\nchanges/data/changes.json, and a GitHub Action regenerates it on\npush to main and hourly, committing only when the feed changed.\n\nCo-Authored-By: Claude Haiku 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01Npax7Ktj82GJtDRMWxd4hZ",
+      "author": "Claude",
+      "authorUrl": "https://github.com/claude",
+      "date": "2026-11-01T23:03:39Z",
+      "url": "https://github.com/Elixizz/roster/commit/d4ca9c8a91732d6ff02d4aa815bfd56b9fd29795"
+    }
+  ]
 }
