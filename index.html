@@ -57,12 +57,6 @@
       color: var(--muted);
       margin: 0 0 12px;
     }
-    h1 {
-      font-size: clamp(2.2rem, 7vw, 3.6rem);
-      line-height: 1.1;
-      margin: 0 0 16px;
-      letter-spacing: -0.02em;
-    }
     .tagline {
       margin: 0 0 32px;
       color: var(--muted);
@@ -92,26 +86,37 @@
       color: var(--accent-text);
     }
     .btn.primary:hover { opacity: 0.9; }
-    footer {
-      margin-top: 40px;
-      font-size: 0.85rem;
-      color: var(--muted);
+    .hero-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 0 0 20px;
+    }
+    .btn.hero {
+      font-size: clamp(1.2rem, 4.5vw, 1.6rem);
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+      padding: 28px 16px;
+      border-radius: 14px;
+      border-width: 2px;
+    }
+    @media (max-width: 420px) {
+      .hero-buttons { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
   <main>
     <p class="eyebrow">Roster</p>
-    <h1>Your team.<br>Free agency.</h1>
+    <nav class="hero-buttons">
+      <a class="btn hero" href="team/">Your team</a>
+      <a class="btn hero" href="free-agency/">Your free agency</a>
+    </nav>
     <p class="tagline">Build your squad, keep your options open.</p>
 
     <nav class="buttons">
       <a class="btn primary" href="picks/">Draft picks</a>
-      <a class="btn" href="changes/">View repo changes</a>
-      <a class="btn" href="https://github.com/Elixizz/roster" target="_blank" rel="noopener">View on GitHub</a>
     </nav>
-
-    <footer>Lapis Studios</footer>
   </main>
 </body>
 </html>
