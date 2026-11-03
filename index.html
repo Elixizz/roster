@@ -11,8 +11,6 @@
       --text: #ffffff;
       --lime: #a3ff12;
       --lime-text: #000000;
-      --accent: #2f6fdb;
-      --accent-text: #ffffff;
       color-scheme: dark;
     }
 
@@ -63,10 +61,11 @@
       font-weight: 600;
     }
     .btn.primary {
-      background: var(--accent);
-      color: var(--accent-text);
+      background: transparent;
+      border: 2px solid var(--lime);
+      color: var(--lime);
     }
-    .btn.primary:hover { opacity: 0.9; }
+    .btn.primary:hover { background: var(--lime); color: var(--lime-text); }
     .hero-buttons {
       display: grid;
       grid-template-columns: 1fr 1fr;
