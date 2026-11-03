@@ -1,10 +1,20 @@
 {
   "repo": "Elixizz/roster",
   "repoUrl": "https://github.com/Elixizz/roster",
-  "generatedAt": "2026-11-03T02:39:12.543Z",
+  "generatedAt": "2026-11-03T04:16:24.192Z",
   "emptyRepo": false,
-  "count": 2,
+  "count": 3,
   "commits": [
+    {
+      "sha": "b4e1a9707fb8d05cda711448918a64fd5db95ead",
+      "shortSha": "b4e1a97",
+      "title": "Load changes feed from GitHub raw URL",
+      "body": "The lapistudios.com/roster changes page now fetches the feed directly from\nraw.githubusercontent.com instead of a relative data file, so it stays current.\n\nCo-Authored-By: Claude Haiku 5.5 <noreply@anthropic.com>",
+      "author": "Elixizz",
+      "authorUrl": null,
+      "date": "2026-11-03T04:06:03Z",
+      "url": "https://github.com/Elixizz/roster/commit/b4e1a9707fb8d05cda711448918a64fd5db95ead"
+    },
     {
       "sha": "3964a78d1a4c26d4f3730121fdc5008e9df7c9e9",
       "shortSha": "3964a78",
