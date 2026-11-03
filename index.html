@@ -45,13 +45,6 @@
       padding: 24px 16px 48px;
     }
     .content { max-width: 560px; width: 100%; }
-    .buttons {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      max-width: 320px;
-      margin: 0 auto;
-    }
     .btn {
       display: block;
       padding: 14px 20px;
@@ -60,18 +53,13 @@
       text-decoration: none;
       font-weight: 600;
     }
-    .btn.primary {
-      background: transparent;
-      border: 2px solid var(--lime);
-      color: var(--lime);
-    }
-    .btn.primary:hover { background: var(--lime); color: var(--lime-text); }
     .hero-buttons {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
       gap: 12px;
-      margin: 0 0 32px;
     }
+    .hero-buttons .btn { flex: 0 0 calc(50% - 6px); }
     .btn.hero {
       background: var(--lime);
       color: var(--lime-text);
@@ -80,12 +68,18 @@
       line-height: 1.2;
       letter-spacing: -0.01em;
       padding: 28px 16px;
+      border: 2px solid var(--lime);
       border-radius: 14px;
     }
     .btn.hero:hover { filter: brightness(1.08); }
+    .btn.hero.outline {
+      background: transparent;
+      color: var(--lime);
+    }
+    .btn.hero.outline:hover { background: var(--lime); color: var(--lime-text); filter: none; }
     .btn:focus-visible { outline: 3px solid var(--text); outline-offset: 3px; }
     @media (max-width: 420px) {
-      .hero-buttons { grid-template-columns: 1fr; }
+      .hero-buttons .btn { flex-basis: 100%; }
     }
   </style>
 </head>
@@ -98,11 +92,8 @@
     <div class="content">
       <nav class="hero-buttons">
         <a class="btn hero" href="team/">Your team</a>
-        <a class="btn hero" href="free-agency/">Your free agency</a>
-      </nav>
-
-      <nav class="buttons">
-        <a class="btn primary" href="picks/">Draft picks</a>
+        <a class="btn hero outline" href="free-agency/">Your free agency</a>
+        <a class="btn hero outline" href="picks/">Draft picks</a>
       </nav>
     </div>
   </main>
