@@ -7,61 +7,46 @@
   <meta name="description" content="Your team. Free agency.">
   <style>
     :root {
-      --bg: #f7f7f5;
-      --text: #1d1d1f;
-      --muted: #6b6b70;
+      --bg: #000000;
+      --text: #ffffff;
+      --lime: #a3ff12;
+      --lime-text: #000000;
       --accent: #2f6fdb;
       --accent-text: #ffffff;
-      --line: #d9d9d6;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) {
-        --bg: #161618;
-        --text: #ecece9;
-        --muted: #9a9aa0;
-        --accent: #7aa7ff;
-        --accent-text: #0d0d0f;
-        --line: #3a3a40;
-      }
-    }
-    :root[data-theme="dark"] {
-      --bg: #161618;
-      --text: #ecece9;
-      --muted: #9a9aa0;
-      --accent: #7aa7ff;
-      --accent-text: #0d0d0f;
-      --line: #3a3a40;
+      color-scheme: dark;
     }
 
     * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; height: 100%; }
+    html, body { margin: 0; padding: 0; min-height: 100%; }
     body {
       background: var(--bg);
       color: var(--text);
       font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
       display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px 16px;
+      flex-direction: column;
+    }
+    .site-header {
+      padding: 20px 24px;
+    }
+    .site-header h1 {
+      margin: 0;
+      font-size: 1.75rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text);
     }
     main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       text-align: center;
-      max-width: 560px;
-      width: 100%;
+      padding: 24px 16px 48px;
     }
-    .eyebrow {
-      font-size: 0.8rem;
-      font-weight: 600;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin: 0 0 12px;
-    }
-    .tagline {
-      margin: 0 0 32px;
-      color: var(--muted);
-      font-size: 1.05rem;
-    }
+    .content { max-width: 560px; width: 100%; }
     .buttons {
       display: flex;
       flex-direction: column;
@@ -73,16 +58,12 @@
       display: block;
       padding: 14px 20px;
       border-radius: 10px;
-      border: 1px solid var(--line);
+      border: 1px solid transparent;
       text-decoration: none;
       font-weight: 600;
-      color: var(--text);
-      background: transparent;
     }
-    .btn:hover { border-color: var(--accent); }
     .btn.primary {
       background: var(--accent);
-      border-color: var(--accent);
       color: var(--accent-text);
     }
     .btn.primary:hover { opacity: 0.9; }
@@ -90,33 +71,41 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
-      margin: 0 0 20px;
+      margin: 0 0 32px;
     }
     .btn.hero {
+      background: var(--lime);
+      color: var(--lime-text);
       font-size: clamp(1.2rem, 4.5vw, 1.6rem);
+      font-weight: 700;
       line-height: 1.2;
       letter-spacing: -0.01em;
       padding: 28px 16px;
       border-radius: 14px;
-      border-width: 2px;
     }
+    .btn.hero:hover { filter: brightness(1.08); }
+    .btn:focus-visible { outline: 3px solid var(--text); outline-offset: 3px; }
     @media (max-width: 420px) {
       .hero-buttons { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <main>
-    <p class="eyebrow">Roster</p>
-    <nav class="hero-buttons">
-      <a class="btn hero" href="team/">Your team</a>
-      <a class="btn hero" href="free-agency/">Your free agency</a>
-    </nav>
-    <p class="tagline">Build your squad, keep your options open.</p>
+  <header class="site-header">
+    <h1>Roster</h1>
+  </header>
 
-    <nav class="buttons">
-      <a class="btn primary" href="picks/">Draft picks</a>
-    </nav>
+  <main>
+    <div class="content">
+      <nav class="hero-buttons">
+        <a class="btn hero" href="team/">Your team</a>
+        <a class="btn hero" href="free-agency/">Your free agency</a>
+      </nav>
+
+      <nav class="buttons">
+        <a class="btn primary" href="picks/">Draft picks</a>
+      </nav>
+    </div>
   </main>
 </body>
 </html>
