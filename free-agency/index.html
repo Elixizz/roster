@@ -26,10 +26,15 @@
     }
     .filters button[aria-pressed="true"] { background: var(--accent); color: #000; }
     .filters button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    .filters.groups { margin-bottom: 8px; }
+    .filters.groups button { font-size: 0.95rem; padding: 8px 16px; }
+    #filters { margin-top: 0; }
+    #filters button { border-width: 1px; padding: 4px 12px; font-size: 0.85rem; }
+    #filters:empty { display: none; }
     .filters .n { font-weight: 500; opacity: 0.75; margin-left: 4px; }
 
     .list { list-style: none; margin: 0; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-    .head, .player { display: grid; grid-template-columns: 44px 44px 1fr 64px 80px; align-items: center; gap: 12px; padding: 10px 14px; }
+    .head, .player { display: grid; grid-template-columns: 44px 44px 1fr 56px; align-items: center; gap: 12px; padding: 10px 14px; }
     .head { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--line); }
     .player + .player { border-top: 1px solid var(--line); }
     .rank { color: var(--muted); font-weight: 700; text-align: right; }
@@ -39,13 +44,10 @@
     .name.empty { color: #555; font-weight: 500; font-style: italic; }
     .team { display: block; color: var(--muted); font-size: 0.8rem; font-weight: 400; font-style: normal; }
     .pos { justify-self: start; font-size: 0.75rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--accent); color: var(--accent); }
-    .pts { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
-    .pts.empty { color: #555; }
-    .head .pts { font-weight: 400; }
     .none { padding: 24px; color: var(--muted); text-align: center; }
 
     @media (max-width: 480px) {
-      .head, .player { grid-template-columns: 28px 36px 1fr 48px 56px; gap: 8px; padding: 10px; }
+      .head, .player { grid-template-columns: 28px 36px 1fr 52px; gap: 8px; padding: 10px; }
       .avatar { width: 34px; height: 34px; }
     }
   </style>
@@ -56,9 +58,10 @@
     <header>
       <a class="back" href="../">← Back to Roster</a>
       <h1>Your free agency</h1>
-      <p class="sub">Top-scoring available players.</p>
+      <p class="sub">Available players by position.</p>
     </header>
 
+    <div class="filters groups" id="groups" role="group" aria-label="Filter by position group"></div>
     <div class="filters" id="filters" role="group" aria-label="Filter by position"></div>
 
     <div class="list" role="table" aria-label="Free agents">
@@ -67,7 +70,6 @@
         <span role="columnheader" aria-label="Photo"></span>
         <span role="columnheader">Player</span>
         <span role="columnheader">Pos</span>
-        <span class="pts" role="columnheader">Pts</span>
       </div>
       <ul id="players" style="list-style:none;margin:0;padding:0" role="rowgroup"></ul>
     </div>
@@ -76,59 +78,82 @@
   <script src="data/players.js"></script>
   <script>
   (function () {
-    var POSITIONS = ["ALL", "QB", "RB", "WR", "TE", "K", "DEF"];
-    var LABELS = { ALL: "All" };
-    var players = (window.FREE_AGENTS || []).slice();
+    var GROUPS = [
+      { id: "all", label: "All", positions: null },
+      { id: "offense", label: "Offense", positions: ["QB", "RB", "WR", "TE"] },
+      { id: "oline", label: "Offensive line", positions: ["C", "G", "T"] },
+      { id: "defense", label: "Defense", positions: ["DE", "DT", "LB", "CB", "S"] },
+      { id: "special", label: "Special teams", positions: ["K", "P", "LS"] }
+    ];
+    var ORDER = [].concat.apply([], GROUPS.slice(1).map(function (g) { return g.positions; }));
+    var NAMES = { QB: "Quarterback", RB: "Running back", WR: "Wide receiver", TE: "Tight end",
+      C: "Center", G: "Guard", T: "Tackle", DE: "Defensive end", DT: "Defensive tackle",
+      LB: "Linebacker", CB: "Cornerback", S: "Safety", K: "Kicker", P: "Punter", LS: "Long snapper" };
+    var players = (window.FREE_AGENTS || []).filter(function (p) { return ORDER.indexOf(p.pos) >= 0; });
     var silhouette = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z"/></svg>';
 
     function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return "&#" + c.charCodeAt(0) + ";"; }); }
+    function count(list) { return players.filter(function (x) { return !list || list.indexOf(x.pos) >= 0; }).length; }
 
-    // Highest points first; players without points go to the bottom.
-    players.sort(function (a, b) {
-      var pa = a.points == null ? -Infinity : a.points, pb = b.points == null ? -Infinity : b.points;
-      return pb - pa;
-    });
+    // Keep players grouped by position, in the order above.
+    players = players.map(function (p, i) { return { p: p, i: i }; }).sort(function (a, b) {
+      return (ORDER.indexOf(a.p.pos) - ORDER.indexOf(b.p.pos)) || (a.i - b.i);
+    }).map(function (x) { return x.p; });
 
-    function current() {
-      var h = decodeURIComponent(location.hash.slice(1)).toUpperCase();
-      return POSITIONS.indexOf(h) >= 0 ? h : "ALL";
+    // URL hash is a group id ("#defense") or a position ("#lb").
+    function state() {
+      var h = decodeURIComponent(location.hash.slice(1)).toLowerCase();
+      var pos = ORDER.indexOf(h.toUpperCase()) >= 0 ? h.toUpperCase() : null;
+      var group = GROUPS.filter(function (g) {
+        return pos ? g.positions && g.positions.indexOf(pos) >= 0 : g.id === h;
+      })[0] || GROUPS[0];
+      return { group: group, pos: pos };
     }
 
-    function renderFilters(active) {
-      document.getElementById("filters").innerHTML = POSITIONS.map(function (p) {
-        var n = p === "ALL" ? players.length : players.filter(function (x) { return x.pos === p; }).length;
-        return '<button type="button" data-pos="' + p + '" aria-pressed="' + (p === active) + '">' +
-          (LABELS[p] || p) + '<span class="n">' + n + '</span></button>';
+    function btn(attr, value, label, pressed, n, title) {
+      return '<button type="button" ' + attr + '="' + value + '" aria-pressed="' + pressed + '"' +
+        (title ? ' title="' + title + '"' : '') + '>' + label + '<span class="n">' + n + '</span></button>';
+    }
+
+    function render() {
+      var st = state();
+      document.getElementById("groups").innerHTML = GROUPS.map(function (g) {
+        return btn("data-group", g.id, g.label, g === st.group, count(g.positions));
       }).join("");
-    }
+      document.getElementById("filters").innerHTML = st.group.positions ? st.group.positions.map(function (p) {
+        return btn("data-pos", p.toLowerCase(), p, p === st.pos, count([p]), NAMES[p]);
+      }).join("") : "";
 
-    function renderList(active) {
-      var list = players.filter(function (x) { return active === "ALL" || x.pos === active; });
+      var show = st.pos ? [st.pos] : st.group.positions;
+      var list = players.filter(function (x) { return !show || show.indexOf(x.pos) >= 0; });
       var el = document.getElementById("players");
-      if (!list.length) { el.innerHTML = '<li class="none">No players at this position.</li>'; return; }
+      if (!list.length) { el.innerHTML = '<li class="none">No players at this position yet.</li>'; return; }
       el.innerHTML = list.map(function (p, i) {
         var hasName = p.name && p.name.trim();
-        var hasPts = p.points != null;
         return '<li class="player" role="row">' +
           '<span class="rank" role="cell">' + (i + 1) + '</span>' +
           '<span class="avatar" role="cell">' + silhouette + '</span>' +
           '<span class="name' + (hasName ? '' : ' empty') + '" role="cell">' +
             (hasName ? esc(p.name) : 'Empty profile') +
             '<span class="team">' + (p.team ? esc(p.team) : '—') + '</span></span>' +
-          '<span class="pos" role="cell">' + esc(p.pos) + '</span>' +
-          '<span class="pts' + (hasPts ? '' : ' empty') + '" role="cell">' + (hasPts ? Number(p.points).toFixed(1) : '—') + '</span>' +
+          '<span class="pos" role="cell" title="' + NAMES[p.pos] + '">' + esc(p.pos) + '</span>' +
         '</li>';
       }).join("");
     }
 
-    function render() { var a = current(); renderFilters(a); renderList(a); }
-
+    function go(hash) {
+      history.replaceState(null, "", hash ? "#" + hash : location.pathname + location.search);
+      render();
+    }
+    document.getElementById("groups").addEventListener("click", function (e) {
+      var b = e.target.closest("button[data-group]");
+      if (b) go(b.getAttribute("data-group") === "all" ? "" : b.getAttribute("data-group"));
+    });
     document.getElementById("filters").addEventListener("click", function (e) {
       var b = e.target.closest("button[data-pos]");
       if (!b) return;
-      var p = b.getAttribute("data-pos");
-      history.replaceState(null, "", p === "ALL" ? location.pathname + location.search : "#" + p.toLowerCase());
-      render();
+      // Clicking the active position again goes back to its whole group.
+      go(b.getAttribute("aria-pressed") === "true" ? state().group.id : b.getAttribute("data-pos"));
     });
     window.addEventListener("hashchange", render);
     render();
