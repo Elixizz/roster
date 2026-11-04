@@ -45,7 +45,7 @@
     .filters .n { font-weight: 500; opacity: 0.75; margin-left: 4px; }
 
     .list { list-style: none; margin: 0; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-    .head, .player { display: grid; grid-template-columns: 44px 48px 1fr 56px; align-items: center; gap: 12px; padding: 10px 14px; }
+    .head, .player { display: grid; grid-template-columns: 48px 48px 1fr 56px; align-items: center; gap: 12px; padding: 10px 14px; }
     .head { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--line); }
     .player + .player { border-top: 1px solid var(--line); }
     .rank { color: var(--muted); font-weight: 700; text-align: right; }
@@ -56,11 +56,38 @@
     .team { display: block; color: var(--muted); font-size: 0.8rem; font-weight: 400; font-style: normal; }
     .ir { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 4px; background: #ff4d4d; color: #000;
       font-size: 0.7rem; font-weight: 800; font-style: normal; letter-spacing: 0.04em; vertical-align: 2px; }
-    .pos { justify-self: start; font-size: 0.75rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--accent); color: var(--accent); }
+    .pos { justify-self: start; font-size: 0.75rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; background: var(--pc, var(--accent)); color: var(--pc-text, #000); }
+
+    /* Position colors: --pc is the color, --pc-text the badge text on it. */
+    [data-pos="QB"] { --pc: #2f7bff; --pc-text: #fff; }   /* blue */
+    [data-pos="RB"] { --pc: #ff8a1f; }                     /* orange */
+    [data-pos="WR"] { --pc: #ff5fb4; }                     /* pink */
+    [data-pos="TE"] { --pc: #a3ff12; }                     /* lime green */
+    [data-pos="C"]  { --pc: #8b3dff; --pc-text: #fff; }   /* purple */
+    [data-pos="T"]  { --pc: #5cc8ff; }                     /* sky blue */
+    [data-pos="G"]  { --pc: #9a6634; --pc-text: #fff; }   /* brown */
+    [data-pos="DE"] { --pc: #ffd60a; }                     /* yellow */
+    [data-pos="CB"] { --pc: #ff2e2e; --pc-text: #fff; }   /* red */
+    [data-pos="S"]  { --pc: #ffffff; }                     /* white */
+    [data-pos="DT"] { --pc: #9e1b3c; --pc-text: #fff; }   /* maroon */
+    [data-pos="LB"] { --pc: #1fbf4f; }                     /* green */
+    [data-pos="K"]  { --pc: #d68cff; }                     /* violet */
+    [data-pos="P"]  { --pc: #14b8a6; }                     /* teal */
+    [data-pos="LS"] { --pc: #d9480f; --pc-text: #fff; }   /* dark orange */
+
+    /* Each row fades from its position color into black. */
+    .player[data-pos] {
+      background: linear-gradient(90deg, rgba(0,0,0,0) 0%, #000 75%), var(--pc);
+      background: linear-gradient(90deg, color-mix(in srgb, var(--pc) 30%, #000) 0%, color-mix(in srgb, var(--pc) 10%, #000) 35%, #000 75%);
+      box-shadow: inset 3px 0 0 var(--pc);
+    }
+    #filters button[data-pos] { border-color: var(--pc); color: var(--pc); }
+    #filters button[data-pos][aria-pressed="true"] { background: var(--pc); color: var(--pc-text, #000); }
     .none { padding: 24px; color: var(--muted); text-align: center; }
 
     @media (max-width: 480px) {
-      .head, .player { grid-template-columns: 28px 36px 1fr 52px; gap: 8px; padding: 10px; }
+      .head, .player { grid-template-columns: 34px 36px 1fr 44px; gap: 8px; padding: 10px; }
+      .rank { font-size: 0.8rem; }
       .avatar { width: 34px; height: 34px; }
     }
   </style>
@@ -187,7 +214,7 @@
         return btn("data-group", g.id, g.label, g === st.group, count(g.positions));
       }).join("");
       document.getElementById("filters").innerHTML = st.group.positions ? st.group.positions.map(function (p) {
-        return btn("data-pos", p.toLowerCase(), p, p === st.pos, count([p]), NAMES[p]);
+        return btn("data-pos", p, p, p === st.pos, count([p]), NAMES[p]);
       }).join("") : "";
 
       var show = st.pos ? [st.pos] : st.group.positions;
@@ -199,7 +226,7 @@
       if (!list.length) { el.innerHTML = '<li class="none">No players match.</li>'; return; }
       el.innerHTML = list.map(function (p, i) {
         var hasName = p.name && p.name.trim();
-        return '<li class="player" role="row">' +
+        return '<li class="player" role="row" data-pos="' + esc(p.pos) + '">' +
           '<span class="rank" role="cell">' + (i + 1) + '</span>' +
           '<span class="avatar" role="cell">' + photoTag(p) + '</span>' +
           '<span class="name' + (hasName ? '' : ' empty') + '" role="cell">' +
@@ -223,7 +250,7 @@
       var b = e.target.closest("button[data-pos]");
       if (!b) return;
       // Clicking the active position again goes back to its whole group.
-      go(b.getAttribute("aria-pressed") === "true" ? state().group.id : b.getAttribute("data-pos"));
+      go(b.getAttribute("aria-pressed") === "true" ? state().group.id : b.getAttribute("data-pos").toLowerCase());
     });
     window.addEventListener("hashchange", render);
     qEl.addEventListener("input", render);
