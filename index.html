@@ -104,8 +104,23 @@
     .scores-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
     .scores-head h2 { margin: 0; font-size: 1.25rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
     .scores-updated { font-size: 0.8rem; opacity: 0.6; }
-    .games { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
-    .game { border: 1px solid #2a2a2a; border-radius: 12px; padding: 12px 14px; background: #0d0d0d; }
+    /* Scores scroll continuously from left to right; hovering pauses them. */
+    .games {
+      overflow: hidden;
+      -webkit-mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
+      mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
+    }
+    .track { display: flex; gap: 12px; width: max-content; animation: scroll-right var(--duration, 40s) linear infinite; }
+    .games:hover .track, .games:focus-within .track { animation-play-state: paused; }
+    @keyframes scroll-right {
+      from { transform: translateX(calc(-50% - 6px)); }
+      to { transform: translateX(0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .games { overflow-x: auto; }
+      .track { animation: none; }
+    }
+    .game { flex: none; width: 240px; border: 1px solid #2a2a2a; border-radius: 12px; padding: 12px 14px; background: #0d0d0d; }
     .game.live { border-color: var(--lime); }
     .game-status { font-size: 0.8rem; opacity: 0.7; margin-bottom: 8px; display: flex; justify-content: space-between; gap: 8px; }
     .game.live .game-status { color: var(--lime); opacity: 1; font-weight: 700; }
@@ -232,12 +247,13 @@
         titleEl.textContent = type === 3 ? "NFL playoffs" : type === 1 ? "NFL preseason" + (week ? " week " + week : "") : "NFL week " + (week || "");
 
         if (!events.length) {
+          lastCards = "";
           gamesEl.innerHTML = '<p class="scores-msg">No NFL games this week.</p>';
           return false;
         }
 
         var anyLive = false;
-        gamesEl.innerHTML = events.map(function (e) {
+        var cards = events.map(function (e) {
           var comp = (e.competitions || [])[0] || {};
           var st = (e.status && e.status.type) || {};
           var game = { state: st.state };
@@ -255,8 +271,36 @@
             teamRow(away, game, poss) + teamRow(home, game, poss) +
             "</article>";
         }).join("");
+        lastCards = cards;
+        layoutTicker();
         return anyLive;
       }
+
+      // Repeat the games until one set fills the screen, then double it so the
+      // loop is seamless. The track slides right by exactly one set and starts over.
+      var lastCards = "";
+      var CARD_STEP = 252; // card width + gap
+      function layoutTicker() {
+        if (!lastCards) return;
+        var count = (lastCards.match(/<article/g) || []).length || 1;
+        var repeats = Math.max(1, Math.ceil(gamesEl.clientWidth / (count * CARD_STEP)));
+        var set = new Array(repeats + 1).join(lastCards);
+        var track = gamesEl.querySelector(".track");
+        if (!track) {
+          gamesEl.innerHTML = '<div class="track"></div>';
+          track = gamesEl.firstChild;
+        }
+        // Second copy is hidden from screen readers so each game is read once.
+        track.innerHTML = set + set.replace(/<article /g, '<article aria-hidden="true" ');
+        // Keep the speed steady (about 40px per second) however many games there are.
+        track.style.setProperty("--duration", Math.round((count * repeats * CARD_STEP) / 40) + "s");
+      }
+
+      var resizeTimer;
+      window.addEventListener("resize", function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(layoutTicker, 200);
+      });
 
       function load() {
         clearTimeout(timer);
