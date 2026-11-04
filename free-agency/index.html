@@ -36,7 +36,7 @@
     .search input:focus-visible, .search select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
     .count { color: var(--muted); font-size: 0.85rem; margin: 0 0 8px; }
     .avatar { overflow: hidden; }
-    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
     .filters.groups { margin-bottom: 8px; }
     .filters.groups button { font-size: 0.95rem; padding: 8px 16px; }
     #filters { margin-top: 0; }
@@ -45,11 +45,11 @@
     .filters .n { font-weight: 500; opacity: 0.75; margin-left: 4px; }
 
     .list { list-style: none; margin: 0; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-    .head, .player { display: grid; grid-template-columns: 44px 44px 1fr 56px; align-items: center; gap: 12px; padding: 10px 14px; }
+    .head, .player { display: grid; grid-template-columns: 44px 48px 1fr 56px; align-items: center; gap: 12px; padding: 10px 14px; }
     .head { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--line); }
     .player + .player { border-top: 1px solid var(--line); }
     .rank { color: var(--muted); font-weight: 700; text-align: right; }
-    .avatar { width: 40px; height: 40px; border-radius: 50%; background: #1c1c1c; display: grid; place-items: center; color: #555; }
+    .avatar { width: 44px; height: 44px; border-radius: 50%; background: #1c1c1c; display: grid; place-items: center; color: #555; }
     .avatar svg { width: 22px; height: 22px; }
     .name { font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .name.empty { color: #555; font-weight: 500; font-style: italic; }
@@ -106,7 +106,7 @@
       C: "Center", G: "Guard", T: "Tackle", DE: "Defensive end", DT: "Defensive tackle",
       LB: "Linebacker", CB: "Cornerback", S: "Safety", K: "Kicker", P: "Punter", LS: "Long snapper" };
     var players = (window.FREE_AGENTS || []).filter(function (p) { return ORDER.indexOf(p.pos) >= 0; });
-    var silhouette = window.SILHOUETTE = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z"/></svg>';
+    var silhouette = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z"/></svg>';
 
     function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return "&#" + c.charCodeAt(0) + ";"; }); }
     var TEAMS = { ARI: "Arizona Cardinals", ATL: "Atlanta Falcons", BAL: "Baltimore Ravens", BUF: "Buffalo Bills",
@@ -157,6 +157,27 @@
         (title ? ' title="' + title + '"' : '') + '>' + label + '<span class="n">' + n + '</span></button>';
     }
 
+    // Headshot: ESPN first, then NFL.com, then the plain silhouette.
+    function photoUrls(p) {
+      var urls = [];
+      if (p.espn) urls.push("https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/" + encodeURIComponent(p.espn) + ".png&w=120&h=87&scale=crop&cquality=60");
+      if (p.photo) urls.push("https://static.www.nfl.com/image/upload/c_fill,g_face,w_96,h_96,f_auto,q_auto/league/" + encodeURIComponent(p.photo));
+      return urls;
+    }
+    function photoTag(p) {
+      var urls = photoUrls(p);
+      if (!urls.length) return silhouette;
+      return '<img src="' + urls[0] + '" data-next="' + esc(urls.slice(1).join(" ")) + '" alt="" loading="lazy" decoding="async">';
+    }
+    // Images don't bubble "error", so listen in the capture phase.
+    document.getElementById("players").addEventListener("error", function (e) {
+      var img = e.target;
+      if (img.tagName !== "IMG") return;
+      var next = (img.getAttribute("data-next") || "").split(" ").filter(Boolean);
+      if (next.length) { img.setAttribute("data-next", next.slice(1).join(" ")); img.src = next[0]; }
+      else img.parentNode.innerHTML = silhouette;
+    }, true);
+
     function render() {
       var st = state();
       pool = base();
@@ -176,10 +197,7 @@
         var hasName = p.name && p.name.trim();
         return '<li class="player" role="row">' +
           '<span class="rank" role="cell">' + (i + 1) + '</span>' +
-          '<span class="avatar" role="cell">' + (p.photo
-            ? '<img src="https://static.www.nfl.com/image/upload/f_auto,q_auto/league/' + encodeURIComponent(p.photo) +
-              '" alt="" loading="lazy" decoding="async" onerror="this.parentNode.innerHTML=SILHOUETTE">'
-            : silhouette) + '</span>' +
+          '<span class="avatar" role="cell">' + photoTag(p) + '</span>' +
           '<span class="name' + (hasName ? '' : ' empty') + '" role="cell">' +
             (hasName ? esc(p.name) : 'Empty profile') +
             '<span class="team">' + (p.team ? esc(TEAMS[p.team] || p.team) : '—') + (p.num ? ' · #' + esc(p.num) : '') + '</span></span>' +
