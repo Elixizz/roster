@@ -118,7 +118,7 @@
     .scores-head h2 { margin: 0; font-size: 1.25rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
     .scores-updated { font-size: 0.8rem; opacity: 0.6; }
     /* Scores scroll continuously from left to right. People can drag or swipe the
-       row; hovering pauses it, and it picks up again a moment after they let go. */
+       row; it picks up again a moment after they let go. */
     .games {
       overflow: hidden;
       cursor: grab;
@@ -321,11 +321,11 @@
       }
 
       // Auto-scroll
-      var dragging = false, hovering = false, resumeAt = 0, lastFrame = 0;
+      var dragging = false, resumeAt = 0, lastFrame = 0;
       function frame(t) {
         var dt = lastFrame ? Math.min((t - lastFrame) / 1000, 0.1) : 0;
         lastFrame = t;
-        if (!reduceMotion && !dragging && !hovering && t >= resumeAt) {
+        if (!reduceMotion && !dragging && t >= resumeAt) {
           offset += SPEED * dt;
           applyOffset();
         }
@@ -358,9 +358,6 @@
       gamesEl.addEventListener("pointerup", endDrag);
       gamesEl.addEventListener("pointercancel", endDrag);
 
-      // Hovering with a mouse pauses the row so a score can be read
-      gamesEl.addEventListener("pointerenter", function (e) { if (e.pointerType === "mouse") hovering = true; });
-      gamesEl.addEventListener("pointerleave", function (e) { if (e.pointerType === "mouse") hovering = false; });
 
       // Sideways trackpad scrolling
       gamesEl.addEventListener("wheel", function (e) {
