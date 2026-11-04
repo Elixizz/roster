@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Log in · Roster</title>
+  <style>
+    :root {
+      --bg: #000000;
+      --text: #ffffff;
+      --muted: #9a9aa0;
+      --lime: #a3ff12;
+      --lime-text: #000000;
+      --field: #141416;
+      --line: #3a3a40;
+      --error: #ff6b6b;
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; min-height: 100%; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      min-height: 100vh;
+    }
+    main { width: 100%; max-width: 340px; }
+    h1 {
+      font-size: 2rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin: 0 0 24px;
+    }
+    form { display: flex; flex-direction: column; gap: 12px; }
+    label { display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; color: var(--muted); }
+    input {
+      font: inherit;
+      color: var(--text);
+      background: var(--field);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    input:focus { outline: 2px solid var(--lime); outline-offset: 1px; }
+    .btn {
+      font: inherit;
+      font-weight: 700;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 2px solid var(--lime);
+      background: var(--lime);
+      color: var(--lime-text);
+      cursor: pointer;
+      margin-top: 6px;
+    }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .link {
+      font: inherit;
+      background: none;
+      border: none;
+      color: var(--lime);
+      cursor: pointer;
+      padding: 12px 0 0;
+      text-align: left;
+    }
+    .msg { min-height: 1.5em; margin: 12px 0 0; color: var(--error); font-size: 0.9rem; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Roster</h1>
+    <form id="auth-form">
+      <label class="hidden" id="name-field">Name
+        <input id="name" type="text" autocomplete="name" maxlength="80">
+      </label>
+      <label>Email
+        <input id="email" type="email" autocomplete="email" required>
+      </label>
+      <label>Password
+        <input id="password" type="password" autocomplete="current-password" minlength="8" required>
+      </label>
+      <button class="btn" id="submit" type="submit">Log in</button>
+      <p class="msg" id="msg" role="alert"></p>
+    </form>
+    <button class="link" id="toggle" type="button">No account? Create one</button>
+  </main>
+  <script>
+    (function () {
+      var API = "/api/collections/roster_users";
+      var signingUp = false;
+      var form = document.getElementById("auth-form");
+      var nameField = document.getElementById("name-field");
+      var nameInput = document.getElementById("name");
+      var emailInput = document.getElementById("email");
+      var passwordInput = document.getElementById("password");
+      var submit = document.getElementById("submit");
+      var toggle = document.getElementById("toggle");
+      var msg = document.getElementById("msg");
+
+      // Only allow redirects back inside the roster site.
+      function nextPath() {
+        var next = new URLSearchParams(location.search).get("next") || "/roster/";
+        return next.indexOf("/roster/") === 0 && next.indexOf("//") !== 0 ? next : "/roster/";
+      }
+
+      function setMode(isSignup) {
+        signingUp = isSignup;
+        nameField.classList.toggle("hidden", !isSignup);
+        submit.textContent = isSignup ? "Create account" : "Log in";
+        toggle.textContent = isSignup ? "Have an account? Log in" : "No account? Create one";
+        passwordInput.setAttribute("autocomplete", isSignup ? "new-password" : "current-password");
+        msg.textContent = "";
+      }
+
+      function fail(text) {
+        msg.textContent = text;
+        submit.disabled = false;
+      }
+
+      function readError(res) {
+        return res.json().then(function (data) { return data.message || "Something went wrong."; },
+          function () { return "Something went wrong."; });
+      }
+
+      function logIn(email, password) {
+        return fetch(API + "/auth-with-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identity: email, password: password })
+        }).then(function (res) {
+          if (!res.ok) return readError(res).then(function (text) { throw new Error(text); });
+          return res.json();
+        });
+      }
+
+      toggle.addEventListener("click", function () { setMode(!signingUp); });
+
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        var email = emailInput.value.trim();
+        var password = passwordInput.value;
+        submit.disabled = true;
+        msg.textContent = signingUp ? "Creating account..." : "Logging in...";
+
+        var step = signingUp
+          ? fetch(API + "/records", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                email: email,
+                password: password,
+                passwordConfirm: password,
+                name: nameInput.value.trim()
+              })
+            }).then(function (res) {
+              if (!res.ok) return readError(res).then(function (text) { throw new Error(text); });
+            })
+          : Promise.resolve();
+
+        step
+          .then(function () { return logIn(email, password); })
+          .then(function (data) {
+            if (window.rosterAuth) {
+              window.rosterAuth.save({ token: data.token, email: data.record.email, name: data.record.name || "" });
+            }
+            location.replace(nextPath());
+          })
+          .catch(function (err) {
+            fail(err.message === "Failed to fetch" ? "Could not reach the server." : err.message);
+          });
+      });
+
+      setMode(false);
+    })();
+  </script>
+  <script src="/roster/assets/auth.js"></script>
+</body>
+</html>
