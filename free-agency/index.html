@@ -26,6 +26,17 @@
     }
     .filters button[aria-pressed="true"] { background: var(--accent); color: #000; }
     .filters button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    .search { display: flex; gap: 8px; margin-top: 20px; }
+    .search input, .search select {
+      font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line);
+      border-radius: 8px; padding: 8px 12px; min-width: 0;
+    }
+    .search input { flex: 1 1 60%; }
+    .search select { flex: 0 1 40%; }
+    .search input:focus-visible, .search select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .count { color: var(--muted); font-size: 0.85rem; margin: 0 0 8px; }
+    .avatar { overflow: hidden; }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
     .filters.groups { margin-bottom: 8px; }
     .filters.groups button { font-size: 0.95rem; padding: 8px 16px; }
     #filters { margin-top: 0; }
@@ -58,12 +69,17 @@
     <header>
       <a class="back" href="../">← Back to Roster</a>
       <h1>Your free agency</h1>
-      <p class="sub">Available players by position.</p>
+      <p class="sub">Every player on an NFL 53-man roster<span id="updated"></span>.</p>
     </header>
 
+    <div class="search">
+      <input id="q" type="search" placeholder="Search players" aria-label="Search players" autocomplete="off">
+      <select id="team" aria-label="NFL team"><option value="">All teams</option></select>
+    </div>
     <div class="filters groups" id="groups" role="group" aria-label="Filter by position group"></div>
     <div class="filters" id="filters" role="group" aria-label="Filter by position"></div>
 
+    <p class="count" id="count" aria-live="polite"></p>
     <div class="list" role="table" aria-label="Free agents">
       <div class="head" role="row">
         <span class="rank" role="columnheader">#</span>
@@ -90,15 +106,41 @@
       C: "Center", G: "Guard", T: "Tackle", DE: "Defensive end", DT: "Defensive tackle",
       LB: "Linebacker", CB: "Cornerback", S: "Safety", K: "Kicker", P: "Punter", LS: "Long snapper" };
     var players = (window.FREE_AGENTS || []).filter(function (p) { return ORDER.indexOf(p.pos) >= 0; });
-    var silhouette = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z"/></svg>';
+    var silhouette = window.SILHOUETTE = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z"/></svg>';
 
     function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return "&#" + c.charCodeAt(0) + ";"; }); }
-    function count(list) { return players.filter(function (x) { return !list || list.indexOf(x.pos) >= 0; }).length; }
+    var TEAMS = { ARI: "Arizona Cardinals", ATL: "Atlanta Falcons", BAL: "Baltimore Ravens", BUF: "Buffalo Bills",
+      CAR: "Carolina Panthers", CHI: "Chicago Bears", CIN: "Cincinnati Bengals", CLE: "Cleveland Browns",
+      DAL: "Dallas Cowboys", DEN: "Denver Broncos", DET: "Detroit Lions", GB: "Green Bay Packers",
+      HOU: "Houston Texans", IND: "Indianapolis Colts", JAX: "Jacksonville Jaguars", KC: "Kansas City Chiefs",
+      LA: "Los Angeles Rams", LAC: "Los Angeles Chargers", LV: "Las Vegas Raiders", MIA: "Miami Dolphins",
+      MIN: "Minnesota Vikings", NE: "New England Patriots", NO: "New Orleans Saints", NYG: "New York Giants",
+      NYJ: "New York Jets", PHI: "Philadelphia Eagles", PIT: "Pittsburgh Steelers", SEA: "Seattle Seahawks",
+      SF: "San Francisco 49ers", TB: "Tampa Bay Buccaneers", TEN: "Tennessee Titans", WAS: "Washington Commanders" };
+    var qEl = document.getElementById("q"), teamEl = document.getElementById("team");
+    Object.keys(TEAMS).sort(function (a, b) { return TEAMS[a] < TEAMS[b] ? -1 : 1; }).forEach(function (t) {
+      if (!players.some(function (p) { return p.team === t; })) return;
+      var o = document.createElement("option"); o.value = t; o.textContent = TEAMS[t]; teamEl.appendChild(o);
+    });
+    if (window.FREE_AGENTS_UPDATED) document.getElementById("updated").textContent = " · " + window.FREE_AGENTS_UPDATED;
 
-    // Keep players grouped by position, in the order above.
-    players = players.map(function (p, i) { return { p: p, i: i }; }).sort(function (a, b) {
-      return (ORDER.indexOf(a.p.pos) - ORDER.indexOf(b.p.pos)) || (a.i - b.i);
-    }).map(function (x) { return x.p; });
+    // Search and team narrow everything, including the counts on the buttons.
+    function fold(s) { return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
+    function base() {
+      var q = fold(qEl.value.trim()), t = teamEl.value;
+      return players.filter(function (p) {
+        return (!t || p.team === t) && (!q || fold(p.name).indexOf(q) >= 0);
+      });
+    }
+    var pool = players;
+    function count(list) { return pool.filter(function (x) { return !list || list.indexOf(x.pos) >= 0; }).length; }
+
+    // Group players by position (in the order above), then by last name.
+    function lastFirst(n) { var parts = String(n || "").split(" "); return fold(parts.slice(1).join(" ") + " " + parts[0]); }
+    players.forEach(function (p) { p._key = lastFirst(p.name); });
+    players.sort(function (a, b) {
+      return (ORDER.indexOf(a.pos) - ORDER.indexOf(b.pos)) || (a._key < b._key ? -1 : a._key > b._key ? 1 : 0);
+    });
 
     // URL hash is a group id ("#defense") or a position ("#lb").
     function state() {
@@ -117,6 +159,7 @@
 
     function render() {
       var st = state();
+      pool = base();
       document.getElementById("groups").innerHTML = GROUPS.map(function (g) {
         return btn("data-group", g.id, g.label, g === st.group, count(g.positions));
       }).join("");
@@ -125,17 +168,21 @@
       }).join("") : "";
 
       var show = st.pos ? [st.pos] : st.group.positions;
-      var list = players.filter(function (x) { return !show || show.indexOf(x.pos) >= 0; });
+      var list = pool.filter(function (x) { return !show || show.indexOf(x.pos) >= 0; });
       var el = document.getElementById("players");
-      if (!list.length) { el.innerHTML = '<li class="none">No players at this position yet.</li>'; return; }
+      document.getElementById("count").textContent = list.length + (list.length === 1 ? " player" : " players");
+      if (!list.length) { el.innerHTML = '<li class="none">No players match.</li>'; return; }
       el.innerHTML = list.map(function (p, i) {
         var hasName = p.name && p.name.trim();
         return '<li class="player" role="row">' +
           '<span class="rank" role="cell">' + (i + 1) + '</span>' +
-          '<span class="avatar" role="cell">' + silhouette + '</span>' +
+          '<span class="avatar" role="cell">' + (p.photo
+            ? '<img src="https://static.www.nfl.com/image/upload/f_auto,q_auto/league/' + encodeURIComponent(p.photo) +
+              '" alt="" loading="lazy" decoding="async" onerror="this.parentNode.innerHTML=SILHOUETTE">'
+            : silhouette) + '</span>' +
           '<span class="name' + (hasName ? '' : ' empty') + '" role="cell">' +
             (hasName ? esc(p.name) : 'Empty profile') +
-            '<span class="team">' + (p.team ? esc(p.team) : '—') + '</span></span>' +
+            '<span class="team">' + (p.team ? esc(TEAMS[p.team] || p.team) : '—') + (p.num ? ' · #' + esc(p.num) : '') + '</span></span>' +
           '<span class="pos" role="cell" title="' + NAMES[p.pos] + '">' + esc(p.pos) + '</span>' +
         '</li>';
       }).join("");
@@ -156,6 +203,8 @@
       go(b.getAttribute("aria-pressed") === "true" ? state().group.id : b.getAttribute("data-pos"));
     });
     window.addEventListener("hashchange", render);
+    qEl.addEventListener("input", render);
+    teamEl.addEventListener("change", render);
     render();
   })();
   </script>
