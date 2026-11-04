@@ -71,7 +71,7 @@
   </main>
   <script>
     // League page: every team in the league in one list. Tap a team to open it.
-    // Players are not assigned to teams yet, so each team shows 0 of 53 for now.
+    // Each team shows how many players it has drafted, out of 53.
     (function () {
       var KEY = "roster_league";
       var ROSTER_SIZE = 53;
@@ -121,11 +121,14 @@
       Promise.all([
         api("/api/collections/roster_leagues/records/" + leagueId),
         api("/api/collections/roster_teams/records?filter=" + filter + "&perPage=100&sort=created"),
-        api("/api/collections/roster_league_members/records?filter=" + filter + "&perPage=100")
+        api("/api/collections/roster_league_members/records?filter=" + filter + "&perPage=100"),
+        api("/api/collections/roster_draft_picks/records?filter=" + filter + "&perPage=500&fields=user")
       ]).then(function (results) {
         var league = results[0];
         var teams = results[1].items;
         var memberCount = results[2].totalItems;
+        var playerCount = {};
+        results[3].items.forEach(function (p) { playerCount[p.user] = (playerCount[p.user] || 0) + 1; });
 
         document.getElementById("league-title").textContent = league.name;
         document.getElementById("league-code").textContent = league.code;
@@ -150,7 +153,7 @@
           main.appendChild(title);
           main.appendChild(span("ui-row-sub", team.ownerName || "Owner"));
           a.appendChild(main);
-          a.appendChild(span("ui-row-end count", "0/" + ROSTER_SIZE));
+          a.appendChild(span("ui-row-end count", (playerCount[team.user] || 0) + "/" + ROSTER_SIZE));
           a.insertAdjacentHTML("beforeend", CHEVRON);
           li.appendChild(a);
           rows.appendChild(li);

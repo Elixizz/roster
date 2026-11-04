@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/roster/assets/manifest.json">
+  <link rel="icon" href="/roster/assets/icon.svg" type="image/svg+xml">
+  <title>Draft · Roster</title>
+  <link rel="stylesheet" href="/roster/assets/app.css">
+  <style>
+    .clock { text-align: center; padding: 18px 16px; }
+    .clock.mine { border-color: var(--lime); box-shadow: 0 0 0 1px var(--lime) inset; }
+    .clock-round { margin: 0; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+    .clock-team { margin: 6px 0 2px; font-size: clamp(1.3rem, 5.5vw, 1.7rem); font-weight: 800; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+    .clock.mine .clock-team { color: var(--lime); }
+    .clock-time { font-size: 2rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+    .clock-time.late { color: var(--danger); }
+    .clock-sub { margin: 2px 0 0; color: var(--muted); font-size: 0.88rem; }
+    .owner-tools { display: flex; gap: 8px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+
+    .tools { position: sticky; top: calc(var(--appbar-h) + var(--safe-top)); z-index: 15; padding: 10px 0 8px; background: rgba(0, 0, 0, 0.85); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+    .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-top: 8px; padding-bottom: 2px; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chips button { flex: none; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--text); font-weight: 700; font-size: 0.82rem; cursor: pointer; }
+    .chips button[aria-pressed="true"] { background: var(--lime); border-color: var(--lime); color: var(--lime-text); }
+
+    .pos-pill { flex: none; width: 40px; padding: 4px 0; border-radius: 8px; text-align: center; font-size: 0.72rem; font-weight: 800; background: var(--surface-3); color: var(--lime); }
+    .row-actions { display: flex; gap: 6px; flex: none; }
+    .ui-row.static { min-height: 56px; padding: 10px 12px; }
+
+    .board-wrap { overflow: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); max-height: 70vh; }
+    .board { border-collapse: separate; border-spacing: 0; font-size: 0.8rem; }
+    .board th, .board td { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); padding: 6px 8px; vertical-align: top; }
+    .board thead th { position: sticky; top: 0; z-index: 2; background: var(--surface-2); min-width: 120px; max-width: 140px; text-align: left; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .board th.rd { position: sticky; left: 0; z-index: 1; background: var(--surface-2); min-width: 40px; text-align: center; color: var(--muted); }
+    .board thead th.rd { z-index: 3; }
+    .board td { min-width: 120px; max-width: 140px; height: 48px; }
+    .board td.mine { background: rgba(163, 255, 18, 0.05); }
+    .board td.now { box-shadow: inset 0 0 0 2px var(--lime); }
+    .cell-no { color: var(--faint); font-size: 0.7rem; }
+    .cell-name { display: block; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cell-pos { color: var(--lime); font-weight: 800; font-size: 0.7rem; }
+    .cell-auto { color: var(--faint); font-size: 0.7rem; }
+
+    .more-note { text-align: center; color: var(--faint); font-size: 0.85rem; margin: 10px 0 0; }
+  </style>
+</head>
+<body>
+  <script src="/roster/assets/auth.js"></script>
+  <header class="appbar">
+    <div class="appbar-inner">
+      <a class="icon-btn" href="../" data-back aria-label="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </a>
+      <p class="appbar-title">Draft room</p>
+      <span></span>
+    </div>
+  </header>
+
+  <main class="page">
+    <div id="loading" aria-hidden="true">
+      <div class="ui-skeleton" style="height:150px"></div>
+      <div class="ui-skeleton"></div>
+      <div class="ui-skeleton"></div>
+    </div>
+
+    <div class="ui-empty" id="empty" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+      <h2 id="empty-title">No draft yet</h2>
+      <p id="empty-text">The league owner starts the draft from the home screen.</p>
+      <a class="ui-btn primary" href="../">Go to home</a>
+    </div>
+
+    <div id="room" hidden>
+      <div class="ui-card clock" id="clock">
+        <p class="clock-round" id="clock-round"></p>
+        <p class="clock-team" id="clock-team"></p>
+        <div class="clock-time" id="clock-time"></div>
+        <p class="clock-sub" id="clock-sub"></p>
+        <div class="owner-tools" id="owner-tools" hidden>
+          <button class="ui-btn small" id="undo" type="button">Undo last pick</button>
+          <button class="ui-btn small" id="end" type="button">End draft</button>
+        </div>
+      </div>
+
+      <div class="tools">
+        <div class="ui-segment" role="group" aria-label="Draft view" id="views">
+          <button type="button" data-view="players" aria-pressed="true">Players</button>
+          <button type="button" data-view="board" aria-pressed="false">Board</button>
+          <button type="button" data-view="queue" aria-pressed="false">Queue</button>
+        </div>
+        <div id="player-tools" style="margin-top:10px">
+          <input class="ui-input" id="q" type="search" placeholder="Search players" autocomplete="off" aria-label="Search players">
+          <div class="chips" id="chips" role="group" aria-label="Position"></div>
+        </div>
+      </div>
+
+      <section id="view-players">
+        <ul class="ui-list" id="player-list"></ul>
+        <p class="more-note" id="player-note"></p>
+      </section>
+
+      <section id="view-board" hidden>
+        <div class="board-wrap"><table class="board" id="board"></table></div>
+      </section>
+
+      <section id="view-queue" hidden>
+        <p class="ui-note" style="margin:0 4px 10px">If your time runs out, the first player here who's still available is drafted for you.</p>
+        <ul class="ui-list" id="queue-list"></ul>
+        <div class="ui-empty" id="queue-empty" hidden>
+          <h2>Your queue is empty</h2>
+          <p>Add players from the Players tab to line up your picks.</p>
+        </div>
+      </section>
+    </div>
+  </main>
+  <div class="app-toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="../free-agency/data/players.js"></script>
+  <script>
+    // Draft room: whose pick it is and how long they have, every available
+    // player, the full draft board, and your queue. The server checks every
+    // pick; this page polls it every few seconds while the draft is live.
+    (function () {
+      var KEY = "roster_league";
+      var POLL_MS = 5000;
+      var MAX_ROWS = 100;
+      var POSITIONS = ["QB", "RB", "WR", "TE", "C", "G", "T", "DE", "DT", "LB", "CB", "S", "K", "P", "LS"];
+
+      var leagueId = null;
+      try { leagueId = localStorage.getItem(KEY); } catch (e) {}
+
+      var state = { league: null, teams: {}, picks: [], queue: null, view: "players", pos: "", q: "", lastPickNo: -1 };
+
+      // Same id the server uses: ESPN id, or name|team when there isn't one.
+      function playerKey(p) { return p.espn ? String(p.espn) : String(p.name || "") + "|" + String(p.team || ""); }
+      var players = (window.FREE_AGENTS || []).filter(function (p) { return p && p.name && !p.ir; }).map(function (p) {
+        return { id: playerKey(p), name: p.name, pos: p.pos, team: p.team, sort: lastFirst(p.name) };
+      });
+      players.sort(function (a, b) { return POSITIONS.indexOf(a.pos) - POSITIONS.indexOf(b.pos) || (a.sort < b.sort ? -1 : 1); });
+      var byId = {};
+      players.forEach(function (p) { byId[p.id] = p; });
+
+      function lastFirst(n) { var parts = String(n || "").split(" "); return (parts.slice(1).join(" ") + " " + parts[0]).toLowerCase(); }
+      function fold(s) { return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
+      function me() { return window.rosterAuth && window.rosterAuth.current(); }
+      function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; }
+
+      function toast(text) {
+        var t = document.getElementById("toast");
+        t.textContent = text;
+        setTimeout(function () { if (t.textContent === text) t.textContent = ""; }, 2500);
+      }
+
+      function api(path, method, data) {
+        var saved = me();
+        return fetch(path, {
+          method: method || "GET",
+          headers: { "Content-Type": "application/json", Authorization: saved ? saved.token : "" },
+          body: data ? JSON.stringify(data) : undefined
+        }).then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (json) {
+            if (!res.ok) throw new Error(json.message || "Something went wrong.");
+            return json;
+          });
+        });
+      }
+
+      function order() { var o = state.league && state.league.draftOrder; return Array.isArray(o) ? o : []; }
+      function teamName(user) { return state.teams[user] || "Unnamed team"; }
+
+      // Snake order: the same rule the server uses.
+      function clock() {
+        var o = order(), n = o.length;
+        if (!n) return null;
+        var no = state.league.draftPickNo || 0;
+        var round = Math.floor(no / n), slot = no % n;
+        return { user: o[round % 2 === 0 ? slot : n - 1 - slot], round: round + 1, inRound: slot + 1, pickNo: no };
+      }
+
+      function takenIds() {
+        var set = {};
+        state.picks.forEach(function (p) { set[p.playerId] = true; });
+        return set;
+      }
+
+      function myQueue() {
+        var raw = state.queue && state.queue.players;
+        return Array.isArray(raw) ? raw.slice() : [];
+      }
+
+      function isOwner() { var m = me(); return !!(m && state.league && state.league.owner === m.id); }
+      function canPick() {
+        var c = clock(), m = me();
+        return state.league && state.league.draftStatus === "live" && c && m && (c.user === m.id || isOwner());
+      }
+
+      // ---------- Clock ----------
+      function pad(n) { return (n < 10 ? "0" : "") + n; }
+      function renderClock() {
+        var l = state.league, c = clock(), m = me();
+        var box = document.getElementById("clock");
+        var rounds = l.draftRounds || 26;
+        var total = order().length * rounds;
+        document.getElementById("owner-tools").hidden = !isOwner() || l.draftStatus !== "live";
+
+        if (l.draftStatus !== "live" || !c) {
+          box.classList.remove("mine");
+          document.getElementById("clock-round").textContent = l.draftStatus === "done" ? "Draft complete" : "Draft not started";
+          document.getElementById("clock-team").textContent = state.picks.length + " of " + total + " picks made";
+          document.getElementById("clock-time").textContent = "";
+          document.getElementById("clock-sub").textContent = "The rest of each roster fills from free agency.";
+          return;
+        }
+        var mine = m && c.user === m.id;
+        box.classList.toggle("mine", !!mine);
+        document.getElementById("clock-round").textContent = "Round " + c.round + " of " + rounds + " · Pick " + c.inRound + " · #" + (c.pickNo + 1) + " overall";
+        document.getElementById("clock-team").textContent = mine ? "You're on the clock" : teamName(c.user) + " is on the clock";
+        tick();
+      }
+
+      function tick() {
+        var l = state.league;
+        if (!l || l.draftStatus !== "live") return;
+        var left = (l.draftClockMs || 0) + (l.draftPickSeconds || 0) * 1000 - Date.now();
+        var timeEl = document.getElementById("clock-time");
+        var sub = document.getElementById("clock-sub");
+        if (left <= 0) {
+          timeEl.textContent = "0:00";
+          timeEl.classList.add("late");
+          sub.textContent = "Time's up. The first available player in their queue gets drafted, or the owner can pick for them.";
+          return;
+        }
+        timeEl.classList.remove("late");
+        var s = Math.floor(left / 1000), h = Math.floor(s / 3600), mnt = Math.floor((s % 3600) / 60), sec = s % 60;
+        timeEl.textContent = h ? h + ":" + pad(mnt) + ":" + pad(sec) : mnt + ":" + pad(sec);
+        sub.textContent = "left to pick";
+      }
+
+      // ---------- Players ----------
+      function renderChips() {
+        var wrap = document.getElementById("chips");
+        wrap.textContent = "";
+        [""].concat(POSITIONS).forEach(function (pos) {
+          var b = el("button", "", pos || "All");
+          b.type = "button";
+          b.setAttribute("aria-pressed", String(state.pos === pos));
+          b.addEventListener("click", function () { state.pos = pos; renderChips(); renderPlayers(); });
+          wrap.appendChild(b);
+        });
+      }
+
+      function renderPlayers() {
+        var taken = takenIds(), queue = myQueue(), q = fold(state.q), pickable = canPick();
+        var list = players.filter(function (p) {
+          return !taken[p.id] && (!state.pos || p.pos === state.pos) && (!q || fold(p.name).indexOf(q) >= 0);
+        });
+        var ul = document.getElementById("player-list");
+        ul.textContent = "";
+        list.slice(0, MAX_ROWS).forEach(function (p) {
+          var li = el("li");
+          var row = el("div", "ui-row static");
+          row.appendChild(el("span", "pos-pill", p.pos));
+          var main = el("span", "ui-row-main");
+          main.appendChild(el("span", "ui-row-title", p.name));
+          main.appendChild(el("span", "ui-row-sub", p.team || ""));
+          row.appendChild(main);
+          var actions = el("span", "row-actions");
+          var queued = queue.indexOf(p.id) >= 0;
+          var qb = el("button", "ui-btn small", queued ? "Queued" : "Queue");
+          qb.type = "button";
+          qb.disabled = queued;
+          qb.addEventListener("click", function () { addToQueue(p.id); });
+          actions.appendChild(qb);
+          if (pickable) {
+            var db = el("button", "ui-btn small primary", "Draft");
+            db.type = "button";
+            db.addEventListener("click", function () { draft(p, db); });
+            actions.appendChild(db);
+          }
+          row.appendChild(actions);
+          li.appendChild(row);
+          ul.appendChild(li);
+        });
+        ul.hidden = list.length === 0;
+        document.getElementById("player-note").textContent = list.length === 0
+          ? "No available players match."
+          : list.length > MAX_ROWS ? "Showing " + MAX_ROWS + " of " + list.length + " available. Search or pick a position to narrow it down." : list.length + " available";
+      }
+
+      function draft(p, btn) {
+        var c = clock(), m = me();
+        var forOther = c && m && c.user !== m.id;
+        var question = forOther ? "Draft " + p.name + " for " + teamName(c.user) + "?" : "Draft " + p.name + "?";
+        if (!confirm(question)) return;
+        btn.disabled = true;
+        api("/api/roster/draft", "POST", { league: leagueId, action: "pick", player: p.id })
+          .then(function () { toast(p.name + " drafted"); return refresh(true); })
+          .catch(function (err) { btn.disabled = false; toast(err.message); refresh(true); });
+      }
+
+      // ---------- Queue ----------
+      function saveQueue(ids) {
+        var m = me();
+        var req = state.queue
+          ? api("/api/collections/roster_draft_queues/records/" + state.queue.id, "PATCH", { players: ids })
+          : api("/api/collections/roster_draft_queues/records", "POST", { league: leagueId, user: m.id, players: ids });
+        return req.then(function (rec) { state.queue = rec; renderPlayers(); renderQueue(); })
+          .catch(function (err) { toast(err.message); });
+      }
+
+      function addToQueue(id) {
+        var ids = myQueue();
+        if (ids.indexOf(id) < 0) ids.push(id);
+        saveQueue(ids).then(function () { toast("Added to your queue"); });
+      }
+
+      function renderQueue() {
+        var taken = takenIds();
+        var ids = myQueue().filter(function (id) { return byId[id] && !taken[id]; });
+        var ul = document.getElementById("queue-list");
+        ul.textContent = "";
+        ids.forEach(function (id, i) {
+          var p = byId[id];
+          var li = el("li");
+          var row = el("div", "ui-row static");
+          row.appendChild(el("span", "ui-avatar", String(i + 1)));
+          row.appendChild(el("span", "pos-pill", p.pos));
+          var main = el("span", "ui-row-main");
+          main.appendChild(el("span", "ui-row-title", p.name));
+          main.appendChild(el("span", "ui-row-sub", p.team || ""));
+          row.appendChild(main);
+          var actions = el("span", "row-actions");
+          [["↑", -1, "Move up"], ["↓", 1, "Move down"]].forEach(function (a) {
+            var b = el("button", "ui-btn small", a[0]);
+            b.type = "button";
+            b.setAttribute("aria-label", a[2] + ": " + p.name);
+            b.disabled = (a[1] < 0 && i === 0) || (a[1] > 0 && i === ids.length - 1);
+            b.addEventListener("click", function () {
+              var next = ids.slice(), j = i + a[1];
+              next[i] = next[j]; next[j] = id;
+              saveQueue(next);
+            });
+            actions.appendChild(b);
+          });
+          var rm = el("button", "ui-btn small", "Remove");
+          rm.type = "button";
+          rm.addEventListener("click", function () { saveQueue(ids.filter(function (x) { return x !== id; })); });
+          actions.appendChild(rm);
+          row.appendChild(actions);
+          li.appendChild(row);
+          ul.appendChild(li);
+        });
+        ul.hidden = ids.length === 0;
+        document.getElementById("queue-empty").hidden = ids.length > 0;
+      }
+
+      // ---------- Board ----------
+      function renderBoard() {
+        var o = order(), n = o.length, rounds = (state.league && state.league.draftRounds) || 26;
+        var table = document.getElementById("board");
+        table.textContent = "";
+        if (!n) return;
+        var byNo = {};
+        state.picks.forEach(function (p) { byNo[p.pickNo] = p; });
+        var c = clock(), m = me();
+
+        var head = el("thead"), hr = el("tr");
+        hr.appendChild(el("th", "rd", "Rd"));
+        o.forEach(function (user) { var th = el("th", "", teamName(user)); th.title = teamName(user); hr.appendChild(th); });
+        head.appendChild(hr);
+        table.appendChild(head);
+
+        var body = el("tbody");
+        for (var r = 0; r < rounds; r++) {
+          var tr = el("tr");
+          tr.appendChild(el("th", "rd", String(r + 1)));
+          for (var col = 0; col < n; col++) {
+            // Column col belongs to o[col]; in snake order its pick number flips on odd rounds.
+            var slot = r % 2 === 0 ? col : n - 1 - col;
+            var no = r * n + slot;
+            var td = el("td", (m && o[col] === m.id ? "mine" : "") + (c && no === c.pickNo && state.league.draftStatus === "live" ? " now" : ""));
+            td.appendChild(el("span", "cell-no", (r + 1) + "." + pad(slot + 1)));
+            var pick = byNo[no];
+            if (pick) {
+              td.appendChild(el("span", "cell-name", pick.playerName));
+              td.appendChild(el("span", "cell-pos", pick.playerPos + " " + (pick.playerTeam || "")));
+              if (pick.auto) td.appendChild(el("span", "cell-auto", " · auto"));
+            }
+            tr.appendChild(td);
+          }
+          body.appendChild(tr);
+        }
+        table.appendChild(body);
+      }
+
+      // ---------- Views and loading ----------
+      function setView(view) {
+        state.view = view;
+        Array.prototype.forEach.call(document.querySelectorAll("#views button"), function (b) {
+          b.setAttribute("aria-pressed", String(b.getAttribute("data-view") === view));
+        });
+        document.getElementById("view-players").hidden = view !== "players";
+        document.getElementById("view-board").hidden = view !== "board";
+        document.getElementById("view-queue").hidden = view !== "queue";
+        document.getElementById("player-tools").hidden = view !== "players";
+      }
+
+      function renderAll() {
+        renderClock();
+        renderPlayers();
+        renderQueue();
+        renderBoard();
+      }
+
+      function filterFor(field) { return encodeURIComponent(field + '="' + leagueId + '"'); }
+
+      function refresh(force) {
+        return api("/api/collections/roster_leagues/records/" + leagueId).then(function (league) {
+          state.league = league;
+          if (!league.draftStatus) {
+            showEmpty("No draft yet", "The league owner starts the draft from the home screen.");
+            return;
+          }
+          var changed = force || league.draftPickNo !== state.lastPickNo;
+          state.lastPickNo = league.draftPickNo;
+          if (!changed) { renderClock(); return; }
+          return api("/api/collections/roster_draft_picks/records?filter=" + filterFor("league") + "&perPage=500&sort=pickNo")
+            .then(function (data) {
+              state.picks = data.items;
+              document.getElementById("loading").hidden = true;
+              document.getElementById("room").hidden = false;
+              renderAll();
+            });
+        }).catch(function (err) {
+          if (!state.league) showEmpty("Couldn't load the draft", err.message);
+        });
+      }
+
+      function showEmpty(title, text) {
+        document.getElementById("loading").hidden = true;
+        document.getElementById("room").hidden = true;
+        document.getElementById("empty").hidden = false;
+        document.getElementById("empty-title").textContent = title;
+        document.getElementById("empty-text").textContent = text;
+      }
+
+      document.getElementById("views").addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-view]");
+        if (b) setView(b.getAttribute("data-view"));
+      });
+      document.getElementById("q").addEventListener("input", function () { state.q = this.value.trim(); renderPlayers(); });
+      document.getElementById("undo").addEventListener("click", function () {
+        if (!confirm("Take back the last pick?")) return;
+        api("/api/roster/draft", "POST", { league: leagueId, action: "undo" })
+          .then(function () { toast("Last pick undone"); return refresh(true); })
+          .catch(function (err) { toast(err.message); });
+      });
+      document.getElementById("end").addEventListener("click", function () {
+        if (!confirm("End the draft for everyone? Unmade picks stay empty.")) return;
+        api("/api/roster/draft", "POST", { league: leagueId, action: "end" })
+          .then(function () { toast("Draft ended"); if (window.rosterApp) window.rosterApp.refreshDraft(); return refresh(true); })
+          .catch(function (err) { toast(err.message); });
+      });
+
+      if (!leagueId) {
+        showEmpty("No league picked", "Pick or make a league on the home screen first.");
+        return;
+      }
+
+      renderChips();
+      var filter = filterFor("league");
+      Promise.all([
+        api("/api/collections/roster_teams/records?filter=" + filter + "&perPage=100"),
+        api("/api/collections/roster_draft_queues/records?filter=" + filter + "&perPage=1")
+      ]).then(function (results) {
+        results[0].items.forEach(function (t) { state.teams[t.user] = t.name; });
+        state.queue = results[1].items[0] || null;
+        return refresh(true);
+      }).catch(function (err) { showEmpty("Couldn't load the draft", err.message); });
+
+      setInterval(function () { if (!document.hidden) refresh(false); }, POLL_MS);
+      setInterval(tick, 1000);
+      document.addEventListener("visibilitychange", function () { if (!document.hidden) refresh(true); });
+    })();
+  </script>
+  <script src="/roster/assets/app.js"></script>
+</body>
+</html>

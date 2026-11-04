@@ -122,8 +122,8 @@
   <script>
     // ESPN-style team page: step through the league's teams, see each team's
     // starters on offense, defense, and special teams, and open the full
-    // 53-man roster. Players are not assigned to teams yet, so every slot shows
-    // as empty until they are.
+    // 53-man roster. Drafted players fill the starter slots in draft order;
+    // free agency fills the rest later.
     (function () {
       var KEY = "roster_league";
       // Starting lineup: 11 on offense, 11 on defense (4-3), and the specialists.
@@ -144,7 +144,8 @@
       var index = 0;
       var unit = UNITS[0];
       var me = null;
-      var players = []; // filled in once players are assigned to teams
+      var players = []; // drafted players: { owner, name, pos, team }
+      var SLOT_POS = { LT: "T", RT: "T", LG: "G", RG: "G" };
 
       function auth() { return window.rosterAuth && window.rosterAuth.current(); }
 
@@ -218,13 +219,28 @@
         document.getElementById("next").disabled = index >= teams.length - 1;
         document.title = team.name + " · Roster";
 
-        var teamPlayers = players.filter(function (p) { return p.team === team.id; });
+        var teamPlayers = players.filter(function (p) { return p.owner === team.user; });
+
+        // Fill starter slots with drafted players in draft order. Tackles fill
+        // LT and RT; guards fill LG and RG.
+        var used = {};
+        var lineup = {};
+        var filled = 0;
+        var totalStarters = 0;
+        UNITS.forEach(function (u) {
+          lineup[u.id] = u.starters.map(function (slot) {
+            totalStarters++;
+            var base = SLOT_POS[slot] || slot;
+            var p = teamPlayers.filter(function (x, i) { return !used[i] && x.pos === base; })[0];
+            if (p) { used[teamPlayers.indexOf(p)] = true; filled++; }
+            return p || null;
+          });
+        });
 
         var starters = document.getElementById("starters");
         starters.textContent = "";
-        unit.starters.forEach(function (pos) { starters.appendChild(playerRow(pos, null)); });
-        var totalStarters = UNITS.reduce(function (n, u) { return n + u.starters.length; }, 0);
-        document.getElementById("starter-count").textContent = "0 of " + totalStarters + " set";
+        unit.starters.forEach(function (pos, i) { starters.appendChild(playerRow(pos, lineup[unit.id][i])); });
+        document.getElementById("starter-count").textContent = filled + " of " + totalStarters + " set";
 
         var groups = document.getElementById("groups");
         groups.textContent = "";
@@ -304,7 +320,14 @@
 
       var filter = encodeURIComponent('league="' + leagueId + '"');
       me = auth();
-      api("/api/collections/roster_teams/records?filter=" + filter + "&perPage=100&sort=created").then(function (data) {
+      Promise.all([
+        api("/api/collections/roster_teams/records?filter=" + filter + "&perPage=100&sort=created"),
+        api("/api/collections/roster_draft_picks/records?filter=" + filter + "&perPage=500&sort=pickNo")
+      ]).then(function (results) {
+        var data = results[0];
+        players = results[1].items.map(function (p) {
+          return { owner: p.user, name: p.playerName, pos: p.playerPos, team: p.playerTeam };
+        });
         teams = data.items;
         if (!teams.length) {
           showEmpty("No teams yet", "Name your team on the home screen and it will show up here.");

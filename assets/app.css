@@ -376,6 +376,8 @@ button.ui-row:active, a.ui-row:active { background: var(--surface-3); }
 .draft-text small { font-size: 0.78rem; font-weight: 600; opacity: 0.75; }
 .draft-end {
   flex: none;
+  display: inline-flex;
+  align-items: center;
   min-height: 36px;
   padding: 6px 12px;
   border-radius: 10px;
@@ -383,8 +385,10 @@ button.ui-row:active, a.ui-row:active { background: var(--surface-3); }
   background: var(--lime-text);
   color: var(--lime);
   font-weight: 800;
+  text-decoration: none;
   cursor: pointer;
 }
+.draft-bar.mine .draft-dot { animation-duration: 0.7s; }
 .draft-end:disabled { opacity: 0.6; cursor: default; }
 @media (prefers-reduced-motion: reduce) { .draft-dot { animation: none; } }
 

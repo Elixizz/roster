@@ -56,7 +56,9 @@
     .scores-msg { color: var(--muted); font-size: 0.95rem; margin: 0 4px; }
 
     .ui-tiles .ui-tile.primary { grid-column: 1 / -1; min-height: 88px; }
-    .draft-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
+    .draft-card { margin-top: 12px; }
+    .draft-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .draft-start { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; margin-top: 12px; }
     .draft-state { display: block; font-weight: 700; }
     .draft-state.live { color: var(--lime); }
 
@@ -165,11 +167,27 @@
       </div>
 
       <div class="ui-card draft-card" id="draft-card" hidden>
-        <div>
-          <span class="invite-label">Draft</span>
-          <span class="draft-state" id="draft-state">Not started</span>
+        <div class="draft-card-head">
+          <div>
+            <span class="invite-label">Draft · 26 rounds, snake</span>
+            <span class="draft-state" id="draft-state">Not started</span>
+          </div>
+          <a class="ui-btn small" id="draft-room" href="draft/" hidden>Draft room</a>
         </div>
-        <button class="ui-btn primary small" id="draft-btn" type="button">Start draft</button>
+        <div class="draft-start" id="draft-start">
+          <label class="ui-field">Time per pick
+            <select class="ui-input" id="draft-seconds">
+              <option value="60">1 minute</option>
+              <option value="300">5 minutes</option>
+              <option value="900">15 minutes</option>
+              <option value="3600">1 hour</option>
+              <option value="14400">4 hours</option>
+              <option value="28800" selected>8 hours</option>
+              <option value="86400">24 hours</option>
+            </select>
+          </label>
+          <button class="ui-btn primary" id="draft-btn" type="button">Start draft</button>
+        </div>
       </div>
 
       <div class="ui-section">
@@ -190,9 +208,9 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l7 7M4 4h4M4 4v4M20 4l-7 7M20 4h-4M20 4v4"/><path d="M8 16l-4 4M16 16l4 4M9 15l6-6"/></svg>
             <span>Matchup<small>This week</small></span>
           </a>
-          <a class="ui-tile" href="changes/">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-            <span>Updates<small>What's changed</small></span>
+          <a class="ui-tile" href="draft/">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M8 13h3M8 17h6"/></svg>
+            <span>Draft<small>Board and picks</small></span>
           </a>
         </div>
       </div>
@@ -216,8 +234,9 @@
         </form>
       </div>
 
-      <div class="ui-section" style="text-align:center">
+      <div class="ui-section" style="display:flex; justify-content:center; gap:24px">
         <button class="ui-link" id="switch-league" type="button">Switch league</button>
+        <a class="ui-link" href="changes/">What's changed</a>
       </div>
     </section>
 
@@ -355,19 +374,26 @@
         var state = document.getElementById("draft-state");
         var btn = document.getElementById("draft-btn");
         var live = league.draftStatus === "live";
-        state.textContent = live ? "Live now" : league.draftStatus === "done" ? "Finished" : "Not started";
+        var done = league.draftStatus === "done";
+        state.textContent = live ? "Live now" : done ? "Finished" : "Not started";
         state.classList.toggle("live", live);
-        btn.hidden = live;
-        btn.textContent = league.draftStatus === "done" ? "Restart draft" : "Start draft";
+        document.getElementById("draft-start").hidden = live;
+        document.getElementById("draft-room").hidden = !(live || done);
+        btn.textContent = done ? "Restart draft" : "Start draft";
         btn.disabled = false;
       }
 
       document.getElementById("draft-btn").addEventListener("click", function () {
         var btn = this;
         if (!draftLeague || !window.rosterApp) return;
-        if (!confirm("Start the draft? Everyone in the league will see it's live.")) return;
+        var restarting = btn.textContent === "Restart draft";
+        var question = restarting
+          ? "Restart the draft? This clears every pick made so far."
+          : "Start the draft? The order is random, and everyone in the league will see it's live.";
+        if (!confirm(question)) return;
         btn.disabled = true;
-        window.rosterApp.draftAction(draftLeague.id, "start")
+        var seconds = Number(document.getElementById("draft-seconds").value);
+        window.rosterApp.draftAction(draftLeague.id, "start", { seconds: seconds })
           .then(function () { say("The draft is live"); return window.rosterApp.refreshDraft(); })
           .catch(function (err) { btn.disabled = false; say(err.message); });
       });

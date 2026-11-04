@@ -13,6 +13,7 @@ Roster is a static site (plain HTML, CSS, and JavaScript, no build step) that li
 | `free-agency/` | Free agency |
 | `league/` | League view |
 | `matchup/` | Matchup view |
+| `draft/` | Draft room: clock, available players, board, and your queue |
 | `changes/` | Repo changes feed (commits from the repo) |
 
 ## How the site gets to lapistudios.com
@@ -44,6 +45,15 @@ Rules:
 `scripts/build-changes.mjs` reads the recent commits from GitHub and writes them to `changes/data/changes.json`. A GitHub Action (`.github/workflows/update-changes.yml`) runs it hourly and after pushes to `main`, then commits the updated file.
 
 The `changes/` page reads that feed from `changes/data/changes.json`, which the sync copies along with the rest of the site.
+
+## The draft
+
+- The league owner starts the draft from the home screen and picks the time per pick (1 minute to 24 hours, 8 hours by default).
+- It is a 26-round snake draft in a random order. Anyone can be drafted at any position; the rest of each 53-man roster fills from free agency.
+- While it is live, a bar under the top bar shows who is on the clock on every page and links to the draft room.
+- Only the member on the clock can pick (the owner can pick for them). If time runs out, the server drafts the first available player in that member's queue. With an empty queue the clock keeps running until the owner picks for them.
+- The owner can undo the last pick or end the draft from the draft room. Restarting clears every pick.
+- Picks are checked against `free-agency/data/players.js` on the server, so a player must be in that list to be drafted.
 
 ## Local development
 

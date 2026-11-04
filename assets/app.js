@@ -65,21 +65,15 @@
     try { return localStorage.getItem("roster_league"); } catch (e) { return null; }
   }
 
-  function startedText(iso) {
-    var d = new Date(String(iso || "").replace(" ", "T"));
-    if (isNaN(d)) return "";
-    var mins = Math.max(0, Math.round((Date.now() - d.getTime()) / 60000));
-    if (mins < 1) return "Started just now";
-    if (mins < 60) return "Started " + mins + " min ago";
-    return "Started at " + d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-  }
-
-  function draftAction(leagueId, action) {
+  // extra: more fields for the action, e.g. { seconds: 28800 } when starting.
+  function draftAction(leagueId, action, extra) {
     var saved = auth();
+    var body = { league: leagueId, action: action };
+    Object.keys(extra || {}).forEach(function (k) { body[k] = extra[k]; });
     return fetch("/api/roster/draft", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: saved ? saved.token : "" },
-      body: JSON.stringify({ league: leagueId, action: action })
+      body: JSON.stringify(body)
     }).then(function (res) {
       return res.json().catch(function () { return {}; }).then(function (json) {
         if (!res.ok) throw new Error(json.message || "Something went wrong.");
@@ -88,9 +82,35 @@
     });
   }
 
-  function renderDraftBar(league) {
+  // Snake order, the same rule the server uses.
+  function onClock(league) {
+    var o = Array.isArray(league.draftOrder) ? league.draftOrder : [];
+    if (!o.length) return null;
+    var no = league.draftPickNo || 0;
+    var round = Math.floor(no / o.length), slot = no % o.length;
+    return { user: o[round % 2 === 0 ? slot : o.length - 1 - slot], round: round + 1, inRound: slot + 1 };
+  }
+
+  // Team names for the bar, fetched once per league per page.
+  var teamNames = {};
+  function loadTeamNames(leagueId, token) {
+    if (teamNames[leagueId]) return Promise.resolve(teamNames[leagueId]);
+    var filter = encodeURIComponent('league="' + leagueId + '"');
+    return fetch("/api/collections/roster_teams/records?perPage=100&filter=" + filter, { headers: { Authorization: token } })
+      .then(function (res) { return res.ok ? res.json() : { items: [] }; })
+      .then(function (data) {
+        var names = {};
+        data.items.forEach(function (t) { names[t.user] = t.name; });
+        teamNames[leagueId] = names;
+        return names;
+      }, function () { return {}; });
+  }
+
+  function renderDraftBar(league, names) {
     var bar = document.getElementById("draft-bar");
-    var live = league && league.draftStatus === "live";
+    // The draft room shows its own clock, so it doesn't need the bar.
+    var inRoom = location.pathname.indexOf(BASE + "draft/") === 0;
+    var live = league && league.draftStatus === "live" && !inRoom;
     if (!live) {
       if (bar) bar.remove();
       return;
@@ -105,24 +125,18 @@
       else document.body.insertBefore(bar, document.body.firstChild);
     }
     var saved = auth();
-    var isOwner = saved && league.owner === saved.id;
+    var clock = onClock(league);
+    var mine = clock && saved && clock.user === saved.id;
+    bar.classList.toggle("mine", !!mine);
     bar.innerHTML = '<div class="draft-bar-inner">' +
       '<span class="draft-dot" aria-hidden="true"></span>' +
-      '<span class="draft-text"><b>The draft is live</b><small></small></span>' +
-      (isOwner ? '<button type="button" class="draft-end">End draft</button>' : "") +
+      '<span class="draft-text"><b></b><small></small></span>' +
+      '<a class="draft-end" href="' + BASE + 'draft/">' + (mine ? "Pick now" : "Draft room") + "</a>" +
       "</div>";
-    bar.querySelector("small").textContent = startedText(league.draftStartedAt);
-    var end = bar.querySelector(".draft-end");
-    if (end) {
-      end.addEventListener("click", function () {
-        if (!confirm("End the draft for everyone in the league?")) return;
-        end.disabled = true;
-        draftAction(league.id, "end").then(refreshDraft, function (err) {
-          end.disabled = false;
-          alert(err.message);
-        });
-      });
-    }
+    bar.querySelector("b").textContent = mine ? "You're on the clock" : "The draft is live";
+    bar.querySelector("small").textContent = clock
+      ? "Round " + clock.round + ", pick " + clock.inRound + (mine ? "" : " · " + ((names || {})[clock.user] || "Unnamed team") + " is up")
+      : "";
   }
 
   var draftListeners = [];
@@ -137,9 +151,12 @@
       headers: { Authorization: saved.token }
     }).then(function (res) { return res.ok ? res.json() : null; })
       .then(function (league) {
-        renderDraftBar(league);
-        draftListeners.forEach(function (fn) { fn(league); });
-        return league;
+        var names = league && league.draftStatus === "live" ? loadTeamNames(id, saved.token) : Promise.resolve({});
+        return names.then(function (n) {
+          renderDraftBar(league, n);
+          draftListeners.forEach(function (fn) { fn(league); });
+          return league;
+        });
       }, function () { return null; });
   }
 
