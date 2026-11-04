@@ -117,22 +117,21 @@
     .scores-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
     .scores-head h2 { margin: 0; font-size: 1.25rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
     .scores-updated { font-size: 0.8rem; opacity: 0.6; }
-    /* Scores scroll continuously from left to right; hovering pauses them. */
+    /* Scores scroll continuously from left to right. People can drag or swipe the
+       row; hovering pauses it, and it picks up again a moment after they let go. */
     .games {
       overflow: hidden;
+      cursor: grab;
+      touch-action: pan-y; /* vertical swipes still scroll the page */
+      user-select: none;
+      -webkit-user-select: none;
       -webkit-mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
       mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
     }
-    .track { display: flex; gap: 12px; width: max-content; animation: scroll-right var(--duration, 40s) linear infinite; }
-    .games:hover .track, .games:focus-within .track { animation-play-state: paused; }
-    @keyframes scroll-right {
-      from { transform: translateX(calc(-50% - 6px)); }
-      to { transform: translateX(0); }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .games { overflow-x: auto; }
-      .track { animation: none; }
-    }
+    .games.dragging { cursor: grabbing; }
+    .games:focus-visible { outline: 2px solid var(--lime); outline-offset: 4px; }
+    .track { display: flex; gap: 12px; width: max-content; will-change: transform; }
+    .track img { pointer-events: none; -webkit-user-drag: none; }
     .game { flex: none; width: 240px; border: 1px solid #2a2a2a; border-radius: 12px; padding: 12px 14px; background: #0d0d0d; }
     .game.live { border-color: var(--lime); }
     .game-status { font-size: 0.8rem; opacity: 0.7; margin-bottom: 8px; display: flex; justify-content: space-between; gap: 8px; }
@@ -213,7 +212,7 @@
       <h2 id="scores-title">NFL scores</h2>
       <span class="scores-updated" id="scores-updated"></span>
     </div>
-    <div class="games" id="games"><p class="scores-msg">Loading this week's games…</p></div>
+    <div class="games" id="games" tabindex="0" role="region" aria-label="This week's NFL games. Drag, swipe, or use the arrow keys to move through them."><p class="scores-msg">Loading this week's games…</p></div>
   </section>
 
   <script>
@@ -290,24 +289,96 @@
       }
 
       // Repeat the games until one set fills the screen, then double it so the
-      // loop is seamless. The track slides right by exactly one set and starts over.
+      // loop is seamless. The row moves right; once it has moved one whole set
+      // it wraps back, which looks identical.
       var lastCards = "";
-      var CARD_STEP = 252; // card width + gap
+      var CARD_STEP = 252;  // card width + gap
+      var SPEED = 40;       // auto-scroll speed, pixels per second
+      var RESUME_MS = 2000; // pause after someone drags before auto-scroll resumes
+      var reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+      var track = null, setWidth = 0, offset = 0;
+
       function layoutTicker() {
-        if (!lastCards) return;
+        if (!lastCards) { track = null; setWidth = 0; return; }
         var count = (lastCards.match(/<article/g) || []).length || 1;
         var repeats = Math.max(1, Math.ceil(gamesEl.clientWidth / (count * CARD_STEP)));
         var set = new Array(repeats + 1).join(lastCards);
-        var track = gamesEl.querySelector(".track");
+        track = gamesEl.querySelector(".track");
         if (!track) {
           gamesEl.innerHTML = '<div class="track"></div>';
           track = gamesEl.firstChild;
         }
         // Second copy is hidden from screen readers so each game is read once.
         track.innerHTML = set + set.replace(/<article /g, '<article aria-hidden="true" ');
-        // Keep the speed steady (about 40px per second) however many games there are.
-        track.style.setProperty("--duration", Math.round((count * repeats * CARD_STEP) / 40) + "s");
+        setWidth = count * repeats * CARD_STEP;
+        applyOffset();
       }
+
+      function applyOffset() {
+        if (!track || !setWidth) return;
+        var x = ((offset % setWidth) + setWidth) % setWidth;
+        track.style.transform = "translateX(" + (x - setWidth) + "px)";
+      }
+
+      // Auto-scroll
+      var dragging = false, hovering = false, resumeAt = 0, lastFrame = 0;
+      function frame(t) {
+        var dt = lastFrame ? Math.min((t - lastFrame) / 1000, 0.1) : 0;
+        lastFrame = t;
+        if (!reduceMotion && !dragging && !hovering && t >= resumeAt) {
+          offset += SPEED * dt;
+          applyOffset();
+        }
+        requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+      function pauseBriefly() { resumeAt = performance.now() + RESUME_MS; }
+
+      // Drag with a mouse, or swipe on a touch screen
+      var startX = 0, startOffset = 0;
+      gamesEl.addEventListener("pointerdown", function (e) {
+        if (!track || (e.pointerType === "mouse" && e.button !== 0)) return;
+        dragging = true;
+        startX = e.clientX;
+        startOffset = offset;
+        gamesEl.classList.add("dragging");
+        try { gamesEl.setPointerCapture(e.pointerId); } catch (err) {}
+      });
+      gamesEl.addEventListener("pointermove", function (e) {
+        if (!dragging) return;
+        offset = startOffset + (e.clientX - startX);
+        applyOffset();
+      });
+      function endDrag() {
+        if (!dragging) return;
+        dragging = false;
+        gamesEl.classList.remove("dragging");
+        pauseBriefly();
+      }
+      gamesEl.addEventListener("pointerup", endDrag);
+      gamesEl.addEventListener("pointercancel", endDrag);
+
+      // Hovering with a mouse pauses the row so a score can be read
+      gamesEl.addEventListener("pointerenter", function (e) { if (e.pointerType === "mouse") hovering = true; });
+      gamesEl.addEventListener("pointerleave", function (e) { if (e.pointerType === "mouse") hovering = false; });
+
+      // Sideways trackpad scrolling
+      gamesEl.addEventListener("wheel", function (e) {
+        if (!track || Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+        e.preventDefault();
+        offset -= e.deltaX;
+        applyOffset();
+        pauseBriefly();
+      }, { passive: false });
+
+      // Arrow keys move one game at a time
+      gamesEl.addEventListener("keydown", function (e) {
+        if (!track || (e.key !== "ArrowLeft" && e.key !== "ArrowRight")) return;
+        e.preventDefault();
+        offset += e.key === "ArrowRight" ? CARD_STEP : -CARD_STEP;
+        applyOffset();
+        pauseBriefly();
+      });
 
       var resizeTimer;
       window.addEventListener("resize", function () {
