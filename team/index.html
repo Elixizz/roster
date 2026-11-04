@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Your team · Roster</title>
+  <title>Team · Roster</title>
   <style>
     :root {
       --bg: #000000;
@@ -12,7 +12,8 @@
       --lime: #a3ff12;
       --lime-text: #000000;
       --field: #141416;
-      --line: #3a3a40;
+      --line: #2e2e34;
+      --panel: #0d0d0f;
       --error: #ff6b6b;
       color-scheme: dark;
     }
@@ -23,65 +24,121 @@
       background: var(--bg);
       color: var(--text);
       font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      padding: 24px 16px 48px;
+      padding: 16px 16px 48px;
     }
-    main { max-width: 760px; margin: 0 auto; }
-    .back { font-weight: 600; color: var(--lime); text-decoration: none; }
+    main { max-width: 900px; margin: 0 auto; }
+    .back { font-weight: 600; color: var(--lime); text-decoration: none; font-size: 0.9rem; }
     .back:hover { text-decoration: underline; }
-    h1 { font-size: clamp(1.8rem, 6vw, 2.6rem); font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; margin: 16px 0 6px; }
-    .muted { color: var(--muted); margin: 0 0 20px; }
-    .card { border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; max-width: 520px; }
-    .card h2 { margin: 0; font-size: 1.4rem; font-weight: 700; }
-    .card .owner { margin: 2px 0 14px; font-size: 0.9rem; color: var(--muted); }
-    .card .players { margin: 0; font-size: 0.9rem; color: var(--muted); }
-    .sub-title { font-size: 1.1rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; margin: 28px 0 12px; }
-    .panel { display: flex; flex-direction: column; gap: 12px; max-width: 360px; margin-top: 16px; }
-    .panel label { display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; color: var(--muted); }
-    .panel input { font: inherit; color: var(--text); background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
-    .panel input:focus { outline: 2px solid var(--lime); outline-offset: 1px; }
-    .btn { font: inherit; font-weight: 700; padding: 14px 16px; border-radius: 10px; border: 2px solid var(--lime); background: var(--lime); color: var(--lime-text); cursor: pointer; }
-    .btn:disabled { opacity: 0.5; cursor: default; }
-    .msg { min-height: 1.5em; margin: 12px 0 0; font-size: 0.9rem; color: var(--error); }
+
+    .switcher { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0 18px; }
+    .switcher button {
+      font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line);
+      border-radius: 10px; width: 44px; height: 44px; font-size: 1.2rem; cursor: pointer;
+    }
+    .switcher button:hover { border-color: var(--lime); }
+    .switcher button:disabled { opacity: 0.35; cursor: default; border-color: var(--line); }
+    .team-head { text-align: center; min-width: 0; }
+    .team-head h1 { font-size: clamp(1.4rem, 5vw, 2rem); font-weight: 900; text-transform: uppercase; letter-spacing: 0.03em; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .team-head p { margin: 2px 0 0; font-size: 0.9rem; color: var(--muted); }
+
+    .section { margin-top: 24px; }
+    .section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+    .section-head h2 { margin: 0; font-size: 1rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: var(--lime); }
+    .section-head span { font-size: 0.85rem; color: var(--muted); }
+
+    .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+    .slot { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+    .slot .pos { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; color: var(--lime); }
+    .slot .who { margin: 4px 0 0; font-size: 0.95rem; color: var(--muted); }
+
+    .more { display: block; width: 100%; margin-top: 14px; font: inherit; font-weight: 700; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; cursor: pointer; }
+    .more:hover { border-color: var(--lime); }
+
+    .groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; margin-top: 14px; }
+    .group { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+    .group h3 { margin: 0 0 8px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; color: var(--lime); }
+    .group ul { list-style: none; margin: 0; padding: 0; }
+    .group li { font-size: 0.92rem; color: var(--muted); padding: 3px 0; border-bottom: 1px solid var(--line); }
+    .group li:last-child { border-bottom: none; }
+    .empty { color: var(--muted); font-size: 0.9rem; }
+
+    .rename { margin-top: 28px; border-top: 1px solid var(--line); padding-top: 18px; }
+    .rename form { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+    .rename label { display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; color: var(--muted); flex: 1 1 220px; }
+    .rename input { font: inherit; color: var(--text); background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+    .rename input:focus { outline: 2px solid var(--lime); outline-offset: 1px; }
+    .btn { font: inherit; font-weight: 700; padding: 10px 16px; border-radius: 10px; border: 2px solid var(--lime); background: var(--lime); color: var(--lime-text); cursor: pointer; }
+    .msg { min-height: 1.4em; margin: 10px 0 0; font-size: 0.9rem; color: var(--error); }
+    .notice { color: var(--muted); margin: 40px 0; text-align: center; }
   </style>
 </head>
 <body>
   <script src="/roster/assets/auth.js"></script>
   <main>
     <a class="back" href="../">← Back to Roster</a>
-    <h1>Your team</h1>
 
-    <p class="muted" id="empty" hidden>Pick a league on the home page first.</p>
+    <p class="notice" id="empty" hidden>Pick a league on the home page first.</p>
 
     <div id="team-body" hidden>
-      <p class="muted" id="league-name"></p>
-      <div class="card">
-        <h2 id="team-title">No team name yet</h2>
-        <p class="owner" id="team-owner"></p>
-        <p class="players">No players yet</p>
+      <div class="switcher">
+        <button type="button" id="prev" aria-label="Previous team">‹</button>
+        <div class="team-head">
+          <h1 id="team-name">Team</h1>
+          <p id="team-owner"></p>
+        </div>
+        <button type="button" id="next" aria-label="Next team">›</button>
       </div>
 
-      <form class="panel" id="team-form">
-        <label>Team name
-          <input id="team-name" type="text" maxlength="40" required>
-        </label>
-        <button class="btn" type="submit">Save team name</button>
-      </form>
-      <p class="msg" id="team-msg" role="alert"></p>
+      <section class="section">
+        <div class="section-head">
+          <h2>Starters</h2>
+          <span id="starter-count"></span>
+        </div>
+        <div class="slots" id="starters"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>Full roster</h2>
+          <span id="roster-count"></span>
+        </div>
+        <button type="button" class="more" id="more" aria-expanded="false" aria-controls="groups">More players</button>
+        <div class="groups" id="groups" hidden></div>
+      </section>
+
+      <section class="rename" id="rename" hidden>
+        <form id="rename-form">
+          <label>Your team name
+            <input id="rename-input" type="text" maxlength="40" required>
+          </label>
+          <button class="btn" type="submit">Save name</button>
+        </form>
+        <p class="msg" id="rename-msg" role="alert"></p>
+      </section>
     </div>
   </main>
   <script>
-    // Shows the signed-in member's team in the league picked on the home page.
+    // ESPN-style team page: step through the league's teams, see each team's
+    // starters, and open the full 53-man roster. Players are not assigned to
+    // teams yet, so every slot shows as empty until they are.
     (function () {
       var KEY = "roster_league";
+      var STARTERS = [
+        { pos: "QB", count: 1 }, { pos: "RB", count: 2 }, { pos: "WR", count: 3 },
+        { pos: "TE", count: 1 }, { pos: "FLEX", count: 1 }, { pos: "K", count: 1 }, { pos: "DEF", count: 1 }
+      ];
+      var ROSTER_GROUPS = ["QB", "RB", "WR", "TE", "K", "DEF", "Bench"];
+      var TOTAL_ROSTER = 53;
+
       var empty = document.getElementById("empty");
       var body = document.getElementById("team-body");
-      var form = document.getElementById("team-form");
-      var nameInput = document.getElementById("team-name");
-      var msg = document.getElementById("team-msg");
+      var teams = [];
+      var index = 0;
+      var leagueId = null;
+      var me = null;
+      var players = []; // filled in once players are assigned to teams
 
-      function auth() {
-        return window.rosterAuth && window.rosterAuth.current();
-      }
+      function auth() { return window.rosterAuth && window.rosterAuth.current(); }
 
       function api(path, method, data) {
         var saved = auth();
@@ -97,58 +154,102 @@
         });
       }
 
-      function leagueId() {
-        try { return localStorage.getItem(KEY); } catch (e) { return null; }
+      function el(tag, cls, text) {
+        var node = document.createElement(tag);
+        if (cls) node.className = cls;
+        if (text !== undefined) node.textContent = text;
+        return node;
       }
 
-      var id = leagueId();
-      var mine = null;
+      function renderTeam() {
+        var team = teams[index];
+        document.getElementById("team-name").textContent = team ? team.name : "No teams yet";
+        document.getElementById("team-owner").textContent = team ? (team.ownerName || "Owner") : "";
+        document.getElementById("prev").disabled = index <= 0;
+        document.getElementById("next").disabled = index >= teams.length - 1;
 
-      function showTeam(team) {
-        mine = team;
-        document.getElementById("team-title").textContent = team && team.name ? team.name : "No team name yet";
-        var saved = auth();
-        document.getElementById("team-owner").textContent = saved && saved.name ? saved.name : "";
-        nameInput.value = team ? team.name : "";
+        var teamPlayers = team ? players.filter(function (p) { return p.team === team.id; }) : [];
+        var starters = document.getElementById("starters");
+        starters.textContent = "";
+        var filled = 0;
+        STARTERS.forEach(function (slot) {
+          for (var i = 0; i < slot.count; i++) {
+            var card = el("div", "slot");
+            card.appendChild(el("div", "pos", slot.pos));
+            card.appendChild(el("p", "who", "Empty"));
+            starters.appendChild(card);
+          }
+        });
+        document.getElementById("starter-count").textContent = filled + " of " + STARTERS.reduce(function (n, s) { return n + s.count; }, 0) + " set";
+
+        var groups = document.getElementById("groups");
+        groups.textContent = "";
+        ROSTER_GROUPS.forEach(function (group) {
+          var box = el("div", "group");
+          box.appendChild(el("h3", "", group));
+          var list = el("ul");
+          var inGroup = teamPlayers.filter(function (p) { return p.group === group; });
+          if (inGroup.length === 0) {
+            list.appendChild(el("li", "", "Empty"));
+          } else {
+            inGroup.forEach(function (p) { list.appendChild(el("li", "", p.name)); });
+          }
+          box.appendChild(list);
+          groups.appendChild(box);
+        });
+        document.getElementById("roster-count").textContent = teamPlayers.length + " of " + TOTAL_ROSTER + " players";
+
+        var mine = me && team && team.user === me.id;
+        document.getElementById("rename").hidden = !mine;
+        if (mine) document.getElementById("rename-input").value = team.name;
       }
 
-      if (!id) {
+      document.getElementById("prev").addEventListener("click", function () {
+        if (index > 0) { index--; renderTeam(); }
+      });
+      document.getElementById("next").addEventListener("click", function () {
+        if (index < teams.length - 1) { index++; renderTeam(); }
+      });
+      document.getElementById("more").addEventListener("click", function () {
+        var groups = document.getElementById("groups");
+        var open = groups.hidden;
+        groups.hidden = !open;
+        this.setAttribute("aria-expanded", String(open));
+        this.textContent = open ? "Hide players" : "More players";
+      });
+
+      document.getElementById("rename-form").addEventListener("submit", function (event) {
+        event.preventDefault();
+        var team = teams[index];
+        var msg = document.getElementById("rename-msg");
+        msg.textContent = "Saving...";
+        api("/api/collections/roster_teams/records/" + team.id, "PATCH", {
+          name: document.getElementById("rename-input").value.trim()
+        }).then(function (updated) {
+          teams[index] = updated;
+          msg.textContent = "";
+          renderTeam();
+        }).catch(function (err) { msg.textContent = err.message; });
+      });
+
+      try { leagueId = localStorage.getItem(KEY); } catch (e) { leagueId = null; }
+      if (!leagueId) {
         empty.hidden = false;
         return;
       }
 
-      api("/api/collections/roster_leagues/records/" + id).then(function (league) {
-        document.getElementById("league-name").textContent = league.name;
+      var filter = encodeURIComponent('league="' + leagueId + '"');
+      me = auth();
+      api("/api/collections/roster_teams/records?filter=" + filter + "&perPage=100&sort=created").then(function (data) {
+        teams = data.items;
+        var mineIndex = -1;
+        teams.forEach(function (t, i) { if (me && t.user === me.id) mineIndex = i; });
+        index = mineIndex >= 0 ? mineIndex : 0;
         body.hidden = false;
-        var filter = encodeURIComponent('league="' + id + '"');
-        return api("/api/collections/roster_teams/records?filter=" + filter + "&perPage=100");
-      }).then(function (data) {
-        var saved = auth();
-        var team = data.items.filter(function (t) { return saved && t.user === saved.id; })[0];
-        showTeam(team || null);
+        renderTeam();
       }).catch(function (err) {
         empty.hidden = false;
         empty.textContent = err.message;
-      });
-
-      form.addEventListener("submit", function (event) {
-        event.preventDefault();
-        var name = nameInput.value.trim();
-        var saved = auth();
-        msg.textContent = "Saving...";
-
-        var request = mine
-          ? api("/api/collections/roster_teams/records/" + mine.id, "PATCH", { name: name })
-          : api("/api/collections/roster_teams/records", "POST", {
-              league: id, user: saved.id, name: name, ownerName: saved.name || ""
-            });
-
-        request.then(function (team) {
-          msg.textContent = "";
-          showTeam(team);
-        }).catch(function (err) {
-          msg.textContent = err.message;
-        });
       });
     })();
   </script>
