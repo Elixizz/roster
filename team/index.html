@@ -106,8 +106,9 @@
         <div id="groups" style="margin-top:12px" hidden></div>
       </section>
 
-      <section class="ui-section" id="rename" hidden>
-        <form class="ui-card ui-form" id="rename-form">
+      <section class="ui-section" id="rename" style="text-align:center" hidden>
+        <button class="ui-link" id="rename-open" type="button">Rename team</button>
+        <form class="ui-card ui-form" id="rename-form" style="text-align:left" hidden>
           <label class="ui-field">Your team name
             <input class="ui-input" id="rename-input" type="text" maxlength="40" required>
           </label>
@@ -246,6 +247,8 @@
 
         var mine = me && team.user === me.id;
         document.getElementById("rename").hidden = !mine;
+        document.getElementById("rename-form").hidden = true;
+        document.getElementById("rename-open").hidden = false;
         if (mine) document.getElementById("rename-input").value = team.name;
 
         if (history.replaceState) history.replaceState(null, "", "?team=" + encodeURIComponent(team.id));
@@ -263,6 +266,12 @@
         groups.hidden = !open;
         this.setAttribute("aria-expanded", String(open));
         document.getElementById("more-label").textContent = open ? "Hide players" : "More players";
+      });
+
+      document.getElementById("rename-open").addEventListener("click", function () {
+        this.hidden = true;
+        document.getElementById("rename-form").hidden = false;
+        document.getElementById("rename-input").focus();
       });
 
       document.getElementById("rename-form").addEventListener("submit", function (event) {

@@ -363,7 +363,8 @@
             ? "One member hasn't named a team yet."
             : missing + " members haven't named a team yet.";
 
-          teamForm.hidden = false;
+          // Only ask for a team name until it has one; renaming lives on the team page.
+          teamForm.hidden = !!mine;
           teamName.value = mine ? mine.name : "";
           teamForm.dataset.teamId = mine ? mine.id : "";
           teamMsg.textContent = "";
