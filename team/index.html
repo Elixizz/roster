@@ -5,27 +5,152 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Your team · Roster</title>
   <style>
-    :root { --bg: #000000; --bg-gradient: radial-gradient(120% 90% at 0% 0%, #1a2c04 0%, #0b1402 32%, transparent 62%), radial-gradient(120% 90% at 100% 100%, #1a2c04 0%, #0b1402 32%, transparent 62%); --text: #ffffff; --muted: #a3a3a3; --accent: #a3ff12; color-scheme: dark; }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; }
-    body {
-      background-color: var(--bg); background-image: var(--bg-gradient); background-attachment: fixed; color: var(--text);
-      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      display: flex; align-items: center; justify-content: center; padding: 24px 16px;
+    :root {
+      --bg: #000000;
+      --text: #ffffff;
+      --muted: #a3a3a3;
+      --lime: #a3ff12;
+      --lime-text: #000000;
+      --field: #141416;
+      --line: #3a3a40;
+      --error: #ff6b6b;
+      color-scheme: dark;
     }
-    main { text-align: center; max-width: 560px; width: 100%; }
-    h1 { font-size: clamp(2rem, 7vw, 3rem); font-weight: 900; line-height: 1.1; margin: 0 0 12px; letter-spacing: -0.02em; }
-    p { color: var(--muted); margin: 0 0 28px; }
-    a { color: var(--accent); text-decoration: none; font-weight: 600; }
-    a:hover { text-decoration: underline; }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { margin: 0; padding: 0; min-height: 100%; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      padding: 24px 16px 48px;
+    }
+    main { max-width: 760px; margin: 0 auto; }
+    .back { font-weight: 600; color: var(--lime); text-decoration: none; }
+    .back:hover { text-decoration: underline; }
+    h1 { font-size: clamp(1.8rem, 6vw, 2.6rem); font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; margin: 16px 0 6px; }
+    .muted { color: var(--muted); margin: 0 0 20px; }
+    .card { border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; max-width: 520px; }
+    .card h2 { margin: 0; font-size: 1.4rem; font-weight: 700; }
+    .card .owner { margin: 2px 0 14px; font-size: 0.9rem; color: var(--muted); }
+    .card .players { margin: 0; font-size: 0.9rem; color: var(--muted); }
+    .sub-title { font-size: 1.1rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; margin: 28px 0 12px; }
+    .panel { display: flex; flex-direction: column; gap: 12px; max-width: 360px; margin-top: 16px; }
+    .panel label { display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; color: var(--muted); }
+    .panel input { font: inherit; color: var(--text); background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+    .panel input:focus { outline: 2px solid var(--lime); outline-offset: 1px; }
+    .btn { font: inherit; font-weight: 700; padding: 14px 16px; border-radius: 10px; border: 2px solid var(--lime); background: var(--lime); color: var(--lime-text); cursor: pointer; }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .msg { min-height: 1.5em; margin: 12px 0 0; font-size: 0.9rem; color: var(--error); }
   </style>
 </head>
 <body>
   <script src="/roster/assets/auth.js"></script>
   <main>
+    <a class="back" href="../">← Back to Roster</a>
     <h1>Your team</h1>
-    <p>Coming soon.</p>
-    <a href="../">← Back to Roster</a>
+
+    <p class="muted" id="empty" hidden>Pick a league on the home page first.</p>
+
+    <div id="team-body" hidden>
+      <p class="muted" id="league-name"></p>
+      <div class="card">
+        <h2 id="team-title">No team name yet</h2>
+        <p class="owner" id="team-owner"></p>
+        <p class="players">No players yet</p>
+      </div>
+
+      <form class="panel" id="team-form">
+        <label>Team name
+          <input id="team-name" type="text" maxlength="40" required>
+        </label>
+        <button class="btn" type="submit">Save team name</button>
+      </form>
+      <p class="msg" id="team-msg" role="alert"></p>
+    </div>
   </main>
+  <script>
+    // Shows the signed-in member's team in the league picked on the home page.
+    (function () {
+      var KEY = "roster_league";
+      var empty = document.getElementById("empty");
+      var body = document.getElementById("team-body");
+      var form = document.getElementById("team-form");
+      var nameInput = document.getElementById("team-name");
+      var msg = document.getElementById("team-msg");
+
+      function auth() {
+        return window.rosterAuth && window.rosterAuth.current();
+      }
+
+      function api(path, method, data) {
+        var saved = auth();
+        return fetch(path, {
+          method: method || "GET",
+          headers: { "Content-Type": "application/json", Authorization: saved ? saved.token : "" },
+          body: data ? JSON.stringify(data) : undefined
+        }).then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (json) {
+            if (!res.ok) throw new Error(json.message || "Something went wrong.");
+            return json;
+          });
+        });
+      }
+
+      function leagueId() {
+        try { return localStorage.getItem(KEY); } catch (e) { return null; }
+      }
+
+      var id = leagueId();
+      var mine = null;
+
+      function showTeam(team) {
+        mine = team;
+        document.getElementById("team-title").textContent = team && team.name ? team.name : "No team name yet";
+        var saved = auth();
+        document.getElementById("team-owner").textContent = saved && saved.name ? saved.name : "";
+        nameInput.value = team ? team.name : "";
+      }
+
+      if (!id) {
+        empty.hidden = false;
+        return;
+      }
+
+      api("/api/collections/roster_leagues/records/" + id).then(function (league) {
+        document.getElementById("league-name").textContent = league.name;
+        body.hidden = false;
+        var filter = encodeURIComponent('league="' + id + '"');
+        return api("/api/collections/roster_teams/records?filter=" + filter + "&perPage=100");
+      }).then(function (data) {
+        var saved = auth();
+        var team = data.items.filter(function (t) { return saved && t.user === saved.id; })[0];
+        showTeam(team || null);
+      }).catch(function (err) {
+        empty.hidden = false;
+        empty.textContent = err.message;
+      });
+
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        var name = nameInput.value.trim();
+        var saved = auth();
+        msg.textContent = "Saving...";
+
+        var request = mine
+          ? api("/api/collections/roster_teams/records/" + mine.id, "PATCH", { name: name })
+          : api("/api/collections/roster_teams/records", "POST", {
+              league: id, user: saved.id, name: name, ownerName: saved.name || ""
+            });
+
+        request.then(function (team) {
+          msg.textContent = "";
+          showTeam(team);
+        }).catch(function (err) {
+          msg.textContent = err.message;
+        });
+      });
+    })();
+  </script>
 </body>
 </html>
