@@ -118,7 +118,7 @@
     .scores-head h2 { margin: 0; font-size: 1.25rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
     .scores-updated { font-size: 0.8rem; opacity: 0.6; }
     /* Scores scroll continuously from left to right. People can drag or swipe the
-       row; it picks up again a moment after they let go. */
+       row; it only stops while being dragged. */
     .games {
       overflow: hidden;
       cursor: grab;
@@ -294,7 +294,6 @@
       var lastCards = "";
       var CARD_STEP = 252;  // card width + gap
       var SPEED = 40;       // auto-scroll speed, pixels per second
-      var RESUME_MS = 2000; // pause after someone drags before auto-scroll resumes
       var reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
       var track = null, setWidth = 0, offset = 0;
 
@@ -321,18 +320,17 @@
       }
 
       // Auto-scroll
-      var dragging = false, resumeAt = 0, lastFrame = 0;
+      var dragging = false, lastFrame = 0;
       function frame(t) {
         var dt = lastFrame ? Math.min((t - lastFrame) / 1000, 0.1) : 0;
         lastFrame = t;
-        if (!reduceMotion && !dragging && t >= resumeAt) {
+        if (!reduceMotion && !dragging) {
           offset += SPEED * dt;
           applyOffset();
         }
         requestAnimationFrame(frame);
       }
       requestAnimationFrame(frame);
-      function pauseBriefly() { resumeAt = performance.now() + RESUME_MS; }
 
       // Drag with a mouse, or swipe on a touch screen
       var startX = 0, startOffset = 0;
@@ -353,7 +351,6 @@
         if (!dragging) return;
         dragging = false;
         gamesEl.classList.remove("dragging");
-        pauseBriefly();
       }
       gamesEl.addEventListener("pointerup", endDrag);
       gamesEl.addEventListener("pointercancel", endDrag);
@@ -365,7 +362,6 @@
         e.preventDefault();
         offset -= e.deltaX;
         applyOffset();
-        pauseBriefly();
       }, { passive: false });
 
       // Arrow keys move one game at a time
@@ -374,7 +370,6 @@
         e.preventDefault();
         offset += e.key === "ArrowRight" ? CARD_STEP : -CARD_STEP;
         applyOffset();
-        pauseBriefly();
       });
 
       var resizeTimer;
