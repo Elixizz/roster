@@ -54,6 +54,8 @@
     .name { font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .name.empty { color: #555; font-weight: 500; font-style: italic; }
     .team { display: block; color: var(--muted); font-size: 0.8rem; font-weight: 400; font-style: normal; }
+    .ir { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 4px; background: #ff4d4d; color: #000;
+      font-size: 0.7rem; font-weight: 800; font-style: normal; letter-spacing: 0.04em; vertical-align: 2px; }
     .pos { justify-self: start; font-size: 0.75rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--accent); color: var(--accent); }
     .none { padding: 24px; color: var(--muted); text-align: center; }
 
@@ -69,7 +71,7 @@
     <header>
       <a class="back" href="../">← Back to Roster</a>
       <h1>Your free agency</h1>
-      <p class="sub">Every player on an NFL 53-man roster<span id="updated"></span>.</p>
+      <p class="sub">Every player on an NFL 53-man roster, plus injured reserve<span id="updated"></span>.</p>
     </header>
 
     <div class="search">
@@ -191,7 +193,9 @@
       var show = st.pos ? [st.pos] : st.group.positions;
       var list = pool.filter(function (x) { return !show || show.indexOf(x.pos) >= 0; });
       var el = document.getElementById("players");
-      document.getElementById("count").textContent = list.length + (list.length === 1 ? " player" : " players");
+      var onIr = list.filter(function (x) { return x.ir; }).length;
+      document.getElementById("count").textContent = list.length + (list.length === 1 ? " player" : " players") +
+        (onIr ? " · " + onIr + " on IR" : "");
       if (!list.length) { el.innerHTML = '<li class="none">No players match.</li>'; return; }
       el.innerHTML = list.map(function (p, i) {
         var hasName = p.name && p.name.trim();
@@ -200,6 +204,7 @@
           '<span class="avatar" role="cell">' + photoTag(p) + '</span>' +
           '<span class="name' + (hasName ? '' : ' empty') + '" role="cell">' +
             (hasName ? esc(p.name) : 'Empty profile') +
+            (p.ir ? '<span class="ir" title="Injured reserve">IR</span>' : '') +
             '<span class="team">' + (p.team ? esc(TEAMS[p.team] || p.team) : '—') + (p.num ? ' · #' + esc(p.num) : '') + '</span></span>' +
           '<span class="pos" role="cell" title="' + NAMES[p.pos] + '">' + esc(p.pos) + '</span>' +
         '</li>';
