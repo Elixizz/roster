@@ -2,30 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>View matchup · Roster</title>
-  <style>
-    :root { --bg: #000000; --bg-gradient: radial-gradient(120% 90% at 0% 0%, #1a2c04 0%, #0b1402 32%, transparent 62%), radial-gradient(120% 90% at 100% 100%, #1a2c04 0%, #0b1402 32%, transparent 62%); --text: #ffffff; --muted: #a3a3a3; --accent: #a3ff12; color-scheme: dark; }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; }
-    body {
-      background-color: var(--bg); background-image: var(--bg-gradient); background-attachment: fixed; color: var(--text);
-      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      display: flex; align-items: center; justify-content: center; padding: 24px 16px;
-    }
-    main { text-align: center; max-width: 560px; width: 100%; }
-    h1 { font-size: clamp(2rem, 7vw, 3rem); font-weight: 900; line-height: 1.1; margin: 0 0 12px; letter-spacing: -0.02em; }
-    p { color: var(--muted); margin: 0 0 28px; }
-    a { color: var(--accent); text-decoration: none; font-weight: 600; }
-    a:hover { text-decoration: underline; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/roster/assets/manifest.json">
+  <link rel="icon" href="/roster/assets/icon.svg" type="image/svg+xml">
+  <title>Matchup · Roster</title>
+  <link rel="stylesheet" href="/roster/assets/app.css">
 </head>
 <body>
   <script src="/roster/assets/auth.js"></script>
-  <main>
-    <h1>View matchup</h1>
-    <p>Coming soon.</p>
-    <a href="../">← Back to Roster</a>
+  <header class="appbar">
+    <div class="appbar-inner">
+      <a class="icon-btn" href="../" data-back aria-label="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </a>
+      <p class="appbar-title">Matchup</p>
+      <span></span>
+    </div>
+  </header>
+  <main class="page">
+    <div class="ui-empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l7 7M4 4h4M4 4v4M20 4l-7 7M20 4h-4M20 4v4"/><path d="M8 16l-4 4M16 16l4 4M9 15l6-6"/></svg>
+      <h2>Matchups are on the way</h2>
+      <p>Head-to-head matchups will show here once the season schedule is set.</p>
+      <a class="ui-btn" href="../league/">See the league</a>
+    </div>
   </main>
+  <script src="/roster/assets/app.js"></script>
 </body>
 </html>

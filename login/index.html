@@ -2,93 +2,48 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Roster">
+  <link rel="manifest" href="/roster/assets/manifest.json">
+  <link rel="icon" href="/roster/assets/icon.svg" type="image/svg+xml">
   <title>Log in · Roster</title>
+  <link rel="stylesheet" href="/roster/assets/app.css">
   <style>
-    :root {
-      --bg: #000000;
-      --text: #ffffff;
-      --muted: #9a9aa0;
-      --lime: #a3ff12;
-      --lime-text: #000000;
-      --field: #141416;
-      --line: #3a3a40;
-      --error: #ff6b6b;
-      color-scheme: dark;
-    }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; min-height: 100%; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px 16px;
-      min-height: 100vh;
-    }
-    main { width: 100%; max-width: 340px; }
-    h1 {
-      font-size: 2rem;
-      font-weight: 900;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      margin: 0 0 24px;
-    }
-    form { display: flex; flex-direction: column; gap: 12px; }
-    label { display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; color: var(--muted); }
-    input {
-      font: inherit;
-      color: var(--text);
-      background: var(--field);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 12px 14px;
-    }
-    input:focus { outline: 2px solid var(--lime); outline-offset: 1px; }
-    .btn {
-      font: inherit;
-      font-weight: 700;
-      padding: 14px 16px;
-      border-radius: 10px;
-      border: 2px solid var(--lime);
-      background: var(--lime);
-      color: var(--lime-text);
-      cursor: pointer;
-      margin-top: 6px;
-    }
-    .btn:disabled { opacity: 0.5; cursor: default; }
-    .link {
-      font: inherit;
-      background: none;
-      border: none;
-      color: var(--lime);
-      cursor: pointer;
-      padding: 12px 0 0;
-      text-align: left;
-    }
-    .msg { min-height: 1.5em; margin: 12px 0 0; color: var(--error); font-size: 0.9rem; }
+    body { display: flex; align-items: center; justify-content: center; padding: 24px 16px calc(24px + var(--safe-bottom)); }
+    main { width: 100%; max-width: 380px; }
+    .brand-mark { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 28px; text-align: center; }
+    .brand-mark img { width: 72px; height: 72px; border-radius: 18px; box-shadow: 0 10px 30px rgba(163, 255, 18, 0.12); }
+    .brand-mark h1 { margin: 0; font-size: 1.6rem; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; }
+    .brand-mark p { margin: 0; color: var(--muted); }
+    .auth-card { padding: 20px; }
+    .switch { margin-top: 14px; text-align: center; color: var(--muted); font-size: 0.95rem; }
     .hidden { display: none; }
   </style>
 </head>
 <body>
   <main>
-    <h1>Roster</h1>
-    <form id="auth-form">
-      <label class="hidden" id="name-field">Name
-        <input id="name" type="text" autocomplete="name" maxlength="80">
+    <div class="brand-mark">
+      <img src="/roster/assets/icon.svg" alt="">
+      <h1>Roster</h1>
+      <p>Your team. Free agency.</p>
+    </div>
+    <form class="ui-card ui-form auth-card" id="auth-form">
+      <label class="ui-field hidden" id="name-field">Name
+        <input class="ui-input" id="name" type="text" autocomplete="name" maxlength="80" placeholder="Your name">
       </label>
-      <label>Email
-        <input id="email" type="email" autocomplete="email" required>
+      <label class="ui-field">Email
+        <input class="ui-input" id="email" type="email" autocomplete="email" placeholder="you@example.com" required>
       </label>
-      <label>Password
-        <input id="password" type="password" autocomplete="current-password" minlength="8" required>
+      <label class="ui-field">Password
+        <input class="ui-input" id="password" type="password" autocomplete="current-password" minlength="8" placeholder="At least 8 characters" required>
       </label>
-      <button class="btn" id="submit" type="submit">Log in</button>
-      <p class="msg" id="msg" role="alert"></p>
+      <button class="ui-btn primary block" id="submit" type="submit">Log in</button>
+      <p class="ui-msg" id="msg" role="alert"></p>
     </form>
-    <button class="link" id="toggle" type="button">No account? Create one</button>
+    <p class="switch"><button class="ui-link" id="toggle" type="button">No account? Create one</button></p>
   </main>
   <script>
     (function () {
@@ -121,6 +76,7 @@
       function fail(text) {
         msg.textContent = text;
         submit.disabled = false;
+        submit.textContent = signingUp ? "Create account" : "Log in";
       }
 
       function readError(res) {
@@ -146,7 +102,8 @@
         var email = emailInput.value.trim();
         var password = passwordInput.value;
         submit.disabled = true;
-        msg.textContent = signingUp ? "Creating account..." : "Logging in...";
+        msg.textContent = "";
+        submit.textContent = signingUp ? "Creating account..." : "Logging in...";
 
         var step = signingUp
           ? fetch(API + "/records", {

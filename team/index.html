@@ -2,149 +2,146 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/roster/assets/manifest.json">
+  <link rel="icon" href="/roster/assets/icon.svg" type="image/svg+xml">
   <title>Team · Roster</title>
+  <link rel="stylesheet" href="/roster/assets/app.css">
   <style>
-    :root {
-      --bg: #000000;
-      --text: #ffffff;
-      --muted: #a3a3a3;
-      --lime: #a3ff12;
-      --lime-text: #000000;
-      --field: #141416;
-      --line: #2e2e34;
-      --panel: #0d0d0f;
-      --error: #ff6b6b;
-      color-scheme: dark;
+    .team-hero { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; padding: 14px 10px; }
+    .team-id { display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 0; }
+    .team-logo { width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center; background: var(--lime-dim); color: var(--lime); font-size: 1.4rem; font-weight: 900; margin-bottom: 10px; }
+    .team-id h1 { margin: 0; font-size: clamp(1.3rem, 5.5vw, 1.7rem); font-weight: 800; letter-spacing: -0.01em; line-height: 1.2; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .team-id p { margin: 2px 0 0; color: var(--muted); font-size: 0.9rem; }
+    .team-pos { margin-top: 8px; font-size: 0.78rem; color: var(--faint); font-weight: 600; }
+    .team-hero .icon-btn { background: var(--surface-2); }
+    .team-hero .icon-btn:disabled { background: transparent; }
+
+    .slot-pos {
+      flex: none;
+      width: 46px;
+      padding: 4px 0;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 0.74rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      background: var(--surface-3);
+      color: var(--lime);
     }
-    * { box-sizing: border-box; }
-    [hidden] { display: none !important; }
-    html, body { margin: 0; padding: 0; min-height: 100%; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      padding: 16px 16px 48px;
-    }
-    main { max-width: 900px; margin: 0 auto; }
-    .back { font-weight: 600; color: var(--lime); text-decoration: none; font-size: 0.9rem; }
-    .back:hover { text-decoration: underline; }
+    .player-empty { color: var(--faint); font-weight: 500; }
+    .ui-row.static { min-height: 52px; }
 
-    .switcher { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0 18px; }
-    .switcher button {
-      font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line);
-      border-radius: 10px; width: 44px; height: 44px; font-size: 1.2rem; cursor: pointer;
-    }
-    .switcher button:hover { border-color: var(--lime); }
-    .switcher button:disabled { opacity: 0.35; cursor: default; border-color: var(--line); }
-    .team-head { text-align: center; min-width: 0; }
-    .team-head h1 { font-size: clamp(1.4rem, 5vw, 2rem); font-weight: 900; text-transform: uppercase; letter-spacing: 0.03em; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .team-head p { margin: 2px 0 0; font-size: 0.9rem; color: var(--muted); }
-
-    .section { margin-top: 24px; }
-    .section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; }
-    .section-head h2 { margin: 0; font-size: 1rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: var(--lime); }
-    .section-head span { font-size: 0.85rem; color: var(--muted); }
-
-    .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-    .slot { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
-    .slot .pos { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; color: var(--lime); }
-    .slot .who { margin: 4px 0 0; font-size: 0.95rem; color: var(--muted); }
-
-    .more { display: block; width: 100%; margin-top: 14px; font: inherit; font-weight: 700; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; cursor: pointer; }
-    .more:hover { border-color: var(--lime); }
-
-    .groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; margin-top: 14px; }
-    .group { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
-    .group h3 { margin: 0 0 8px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; color: var(--lime); }
-    .unit { margin-top: 16px; }
-    .unit:first-child { margin-top: 0; }
-    .unit > h3 { margin: 0 0 8px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-    .group ul { list-style: none; margin: 0; padding: 0; }
-    .group li { font-size: 0.92rem; color: var(--muted); padding: 3px 0; border-bottom: 1px solid var(--line); }
-    .group li:last-child { border-bottom: none; }
-    .empty { color: var(--muted); font-size: 0.9rem; }
-
-    .rename { margin-top: 28px; border-top: 1px solid var(--line); padding-top: 18px; }
-    .rename form { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
-    .rename label { display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; color: var(--muted); flex: 1 1 220px; }
-    .rename input { font: inherit; color: var(--text); background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
-    .rename input:focus { outline: 2px solid var(--lime); outline-offset: 1px; }
-    .btn { font: inherit; font-weight: 700; padding: 10px 16px; border-radius: 10px; border: 2px solid var(--lime); background: var(--lime); color: var(--lime-text); cursor: pointer; }
-    .msg { min-height: 1.4em; margin: 10px 0 0; font-size: 0.9rem; color: var(--error); }
-    .notice { color: var(--muted); margin: 40px 0; text-align: center; }
+    .roster-unit + .roster-unit { margin-top: 18px; }
+    .roster-pos-head { padding: 10px 16px 6px; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em; color: var(--muted); background: var(--surface-2); border-top: 1px solid var(--line); }
+    .ui-list > .roster-pos-head:first-child { border-top: 0; }
+    .ui-segment { margin-bottom: 12px; }
+    #more svg { transition: transform 0.2s; }
+    #more[aria-expanded="true"] svg { transform: rotate(180deg); }
   </style>
 </head>
 <body>
   <script src="/roster/assets/auth.js"></script>
-  <main>
-    <a class="back" href="../">← Back to Roster</a>
+  <header class="appbar">
+    <div class="appbar-inner">
+      <a class="icon-btn" href="../" data-back aria-label="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </a>
+      <p class="appbar-title">Team</p>
+      <span></span>
+    </div>
+  </header>
 
-    <p class="notice" id="empty" hidden>Pick a league on the home page first.</p>
+  <main class="page">
+    <div id="loading" aria-hidden="true">
+      <div class="ui-skeleton" style="height:170px"></div>
+      <div class="ui-skeleton"></div>
+      <div class="ui-skeleton"></div>
+    </div>
+
+    <div class="ui-empty" id="empty" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 5.5 2.5 10l3 1.2V21h13v-9.8l3-1.2L20 5.5 16 3c-.6 1.6-2.2 2.6-4 2.6S8.6 4.6 8 3z"/></svg>
+      <h2 id="empty-title">No league picked</h2>
+      <p id="empty-text">Pick or make a league on the home screen first.</p>
+      <a class="ui-btn primary" href="../">Go to home</a>
+    </div>
 
     <div id="team-body" hidden>
-      <div class="switcher">
-        <button type="button" id="prev" aria-label="Previous team">‹</button>
-        <div class="team-head">
+      <div class="ui-card team-hero">
+        <button class="icon-btn" type="button" id="prev" aria-label="Previous team">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+        <div class="team-id">
+          <div class="team-logo" id="team-logo" aria-hidden="true"></div>
           <h1 id="team-name">Team</h1>
           <p id="team-owner"></p>
+          <span class="team-pos" id="team-pos"></span>
         </div>
-        <button type="button" id="next" aria-label="Next team">›</button>
+        <button class="icon-btn" type="button" id="next" aria-label="Next team">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
       </div>
 
-      <section class="section">
-        <div class="section-head">
-          <h2>Starters</h2>
-          <span id="starter-count"></span>
+      <section class="ui-section">
+        <div class="ui-segment" role="group" aria-label="Unit" id="units"></div>
+        <div class="ui-section-head">
+          <h2 class="ui-section-title">Starters</h2>
+          <span class="ui-section-meta" id="starter-count"></span>
         </div>
-        <div id="starters"></div>
+        <ul class="ui-list" id="starters"></ul>
       </section>
 
-      <section class="section">
-        <div class="section-head">
-          <h2>Full roster</h2>
-          <span id="roster-count"></span>
+      <section class="ui-section">
+        <div class="ui-section-head">
+          <h2 class="ui-section-title">Full roster</h2>
+          <span class="ui-section-meta" id="roster-count"></span>
         </div>
-        <button type="button" class="more" id="more" aria-expanded="false" aria-controls="groups">More players</button>
-        <div id="groups" hidden></div>
+        <button type="button" class="ui-btn block" id="more" aria-expanded="false" aria-controls="groups">
+          <span id="more-label">More players</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div id="groups" style="margin-top:12px" hidden></div>
       </section>
 
-      <section class="rename" id="rename" hidden>
-        <form id="rename-form">
-          <label>Your team name
-            <input id="rename-input" type="text" maxlength="40" required>
+      <section class="ui-section" id="rename" hidden>
+        <form class="ui-card ui-form" id="rename-form">
+          <label class="ui-field">Your team name
+            <input class="ui-input" id="rename-input" type="text" maxlength="40" required>
           </label>
-          <button class="btn" type="submit">Save name</button>
+          <button class="ui-btn primary block" type="submit">Save name</button>
+          <p class="ui-msg" id="rename-msg" role="alert"></p>
         </form>
-        <p class="msg" id="rename-msg" role="alert"></p>
       </section>
     </div>
   </main>
+  <div class="app-toast" id="toast" role="status" aria-live="polite"></div>
   <script>
     // ESPN-style team page: step through the league's teams, see each team's
-    // starters, and open the full 53-man roster. Players are not assigned to
-    // teams yet, so every slot shows as empty until they are.
+    // starters on offense, defense, and special teams, and open the full
+    // 53-man roster. Players are not assigned to teams yet, so every slot shows
+    // as empty until they are.
     (function () {
       var KEY = "roster_league";
       // Starting lineup: 11 on offense, 11 on defense (4-3), and the specialists.
-      var STARTERS = [
-        { unit: "Offense", slots: ["QB", "RB", "WR", "WR", "WR", "TE", "LT", "LG", "C", "RG", "RT"] },
-        { unit: "Defense", slots: ["DE", "DT", "DT", "DE", "LB", "LB", "LB", "CB", "CB", "S", "S"] },
-        { unit: "Special teams", slots: ["K", "P", "LS"] }
+      var UNITS = [
+        { id: "offense", label: "Offense", starters: ["QB", "RB", "WR", "WR", "WR", "TE", "LT", "LG", "C", "RG", "RT"], positions: ["QB", "RB", "WR", "TE", "C", "G", "T"] },
+        { id: "defense", label: "Defense", starters: ["DE", "DT", "DT", "DE", "LB", "LB", "LB", "CB", "CB", "S", "S"], positions: ["DE", "DT", "LB", "CB", "S"] },
+        { id: "special", label: "Special teams", starters: ["K", "P", "LS"], positions: ["K", "P", "LS"] }
       ];
-      // Full roster positions, matching free-agency/data/players.js.
-      var ROSTER_GROUPS = [
-        { unit: "Offense", positions: ["QB", "RB", "WR", "TE", "C", "G", "T"] },
-        { unit: "Defense", positions: ["DE", "DT", "LB", "CB", "S"] },
-        { unit: "Special teams", positions: ["K", "P", "LS"] }
-      ];
+      var NAMES = { QB: "Quarterbacks", RB: "Running backs", WR: "Wide receivers", TE: "Tight ends",
+        C: "Centers", G: "Guards", T: "Tackles", DE: "Defensive ends", DT: "Defensive tackles",
+        LB: "Linebackers", CB: "Cornerbacks", S: "Safeties", K: "Kickers", P: "Punters", LS: "Long snappers" };
       var TOTAL_ROSTER = 53;
 
+      var loading = document.getElementById("loading");
       var empty = document.getElementById("empty");
       var body = document.getElementById("team-body");
       var teams = [];
       var index = 0;
-      var leagueId = null;
+      var unit = UNITS[0];
       var me = null;
       var players = []; // filled in once players are assigned to teams
 
@@ -171,61 +168,87 @@
         return node;
       }
 
+      function initials(text) {
+        var words = String(text || "").trim().split(/\s+/).filter(Boolean);
+        return (words.slice(0, 2).map(function (w) { return w.charAt(0); }).join("") || "?").toUpperCase();
+      }
+
+      function toast(text) {
+        var t = document.getElementById("toast");
+        t.textContent = text;
+        setTimeout(function () { if (t.textContent === text) t.textContent = ""; }, 2500);
+      }
+
+      function playerRow(pos, player) {
+        var li = el("li");
+        var row = el("div", "ui-row static");
+        row.appendChild(el("span", "slot-pos", pos));
+        var main = el("span", "ui-row-main");
+        if (player) {
+          main.appendChild(el("span", "ui-row-title", player.name));
+          if (player.team) main.appendChild(el("span", "ui-row-sub", player.team));
+        } else {
+          main.appendChild(el("span", "ui-row-title player-empty", "Empty"));
+        }
+        row.appendChild(main);
+        li.appendChild(row);
+        return li;
+      }
+
+      function renderUnits() {
+        var wrap = document.getElementById("units");
+        wrap.textContent = "";
+        UNITS.forEach(function (u) {
+          var b = el("button", "", u.label);
+          b.type = "button";
+          b.setAttribute("aria-pressed", String(u === unit));
+          b.addEventListener("click", function () { unit = u; renderUnits(); renderTeam(); });
+          wrap.appendChild(b);
+        });
+      }
+
       function renderTeam() {
         var team = teams[index];
-        document.getElementById("team-name").textContent = team ? team.name : "No teams yet";
-        document.getElementById("team-owner").textContent = team ? (team.ownerName || "Owner") : "";
+        document.getElementById("team-name").textContent = team.name;
+        document.getElementById("team-owner").textContent = team.ownerName || "Owner";
+        document.getElementById("team-logo").textContent = initials(team.name);
+        document.getElementById("team-pos").textContent = "Team " + (index + 1) + " of " + teams.length;
         document.getElementById("prev").disabled = index <= 0;
         document.getElementById("next").disabled = index >= teams.length - 1;
+        document.title = team.name + " · Roster";
 
-        var teamPlayers = team ? players.filter(function (p) { return p.team === team.id; }) : [];
+        var teamPlayers = players.filter(function (p) { return p.team === team.id; });
+
         var starters = document.getElementById("starters");
         starters.textContent = "";
-        var filled = 0;
-        var total = 0;
-        STARTERS.forEach(function (unit) {
-          var block = el("div", "unit");
-          block.appendChild(el("h3", "", unit.unit));
-          var grid = el("div", "slots");
-          unit.slots.forEach(function (pos) {
-            var card = el("div", "slot");
-            card.appendChild(el("div", "pos", pos));
-            card.appendChild(el("p", "who", "Empty"));
-            grid.appendChild(card);
-            total++;
-          });
-          block.appendChild(grid);
-          starters.appendChild(block);
-        });
-        document.getElementById("starter-count").textContent = filled + " of " + total + " set";
+        unit.starters.forEach(function (pos) { starters.appendChild(playerRow(pos, null)); });
+        var totalStarters = UNITS.reduce(function (n, u) { return n + u.starters.length; }, 0);
+        document.getElementById("starter-count").textContent = "0 of " + totalStarters + " set";
 
         var groups = document.getElementById("groups");
         groups.textContent = "";
-        ROSTER_GROUPS.forEach(function (unit) {
-          var block = el("div", "unit");
-          block.appendChild(el("h3", "", unit.unit));
-          var grid = el("div", "groups");
-          unit.positions.forEach(function (pos) {
-            var box = el("div", "group");
-            box.appendChild(el("h3", "", pos));
-            var list = el("ul");
+        UNITS.forEach(function (u) {
+          var block = el("div", "roster-unit");
+          var head = el("div", "ui-section-head");
+          head.appendChild(el("h3", "ui-section-title", u.label));
+          block.appendChild(head);
+          var list = el("ul", "ui-list");
+          u.positions.forEach(function (pos) {
+            list.appendChild(el("li", "roster-pos-head", NAMES[pos]));
             var atPos = teamPlayers.filter(function (p) { return p.pos === pos; });
-            if (atPos.length === 0) {
-              list.appendChild(el("li", "", "Empty"));
-            } else {
-              atPos.forEach(function (p) { list.appendChild(el("li", "", p.name)); });
-            }
-            box.appendChild(list);
-            grid.appendChild(box);
+            if (atPos.length === 0) list.appendChild(playerRow(pos, null));
+            atPos.forEach(function (p) { list.appendChild(playerRow(pos, p)); });
           });
-          block.appendChild(grid);
+          block.appendChild(list);
           groups.appendChild(block);
         });
         document.getElementById("roster-count").textContent = teamPlayers.length + " of " + TOTAL_ROSTER + " players";
 
-        var mine = me && team && team.user === me.id;
+        var mine = me && team.user === me.id;
         document.getElementById("rename").hidden = !mine;
         if (mine) document.getElementById("rename-input").value = team.name;
+
+        if (history.replaceState) history.replaceState(null, "", "?team=" + encodeURIComponent(team.id));
       }
 
       document.getElementById("prev").addEventListener("click", function () {
@@ -239,26 +262,34 @@
         var open = groups.hidden;
         groups.hidden = !open;
         this.setAttribute("aria-expanded", String(open));
-        this.textContent = open ? "Hide players" : "More players";
+        document.getElementById("more-label").textContent = open ? "Hide players" : "More players";
       });
 
       document.getElementById("rename-form").addEventListener("submit", function (event) {
         event.preventDefault();
         var team = teams[index];
         var msg = document.getElementById("rename-msg");
-        msg.textContent = "Saving...";
+        msg.textContent = "";
         api("/api/collections/roster_teams/records/" + team.id, "PATCH", {
           name: document.getElementById("rename-input").value.trim()
         }).then(function (updated) {
           teams[index] = updated;
-          msg.textContent = "";
           renderTeam();
+          toast("Team name saved");
         }).catch(function (err) { msg.textContent = err.message; });
       });
 
+      function showEmpty(title, text) {
+        loading.hidden = true;
+        empty.hidden = false;
+        if (title) document.getElementById("empty-title").textContent = title;
+        if (text) document.getElementById("empty-text").textContent = text;
+      }
+
+      var leagueId = null;
       try { leagueId = localStorage.getItem(KEY); } catch (e) { leagueId = null; }
       if (!leagueId) {
-        empty.hidden = false;
+        showEmpty();
         return;
       }
 
@@ -266,19 +297,27 @@
       me = auth();
       api("/api/collections/roster_teams/records?filter=" + filter + "&perPage=100&sort=created").then(function (data) {
         teams = data.items;
-        var mineIndex = -1;
-        teams.forEach(function (t, i) { if (me && t.user === me.id) mineIndex = i; });
+        if (!teams.length) {
+          showEmpty("No teams yet", "Name your team on the home screen and it will show up here.");
+          return;
+        }
         var wanted = new URLSearchParams(location.search).get("team");
         var pickedIndex = -1;
-        teams.forEach(function (t, i) { if (t.id === wanted) pickedIndex = i; });
+        var mineIndex = -1;
+        teams.forEach(function (t, i) {
+          if (t.id === wanted) pickedIndex = i;
+          if (me && t.user === me.id) mineIndex = i;
+        });
         index = pickedIndex >= 0 ? pickedIndex : (mineIndex >= 0 ? mineIndex : 0);
+        loading.hidden = true;
         body.hidden = false;
+        renderUnits();
         renderTeam();
       }).catch(function (err) {
-        empty.hidden = false;
-        empty.textContent = err.message;
+        showEmpty("Couldn't load teams", err.message);
       });
     })();
   </script>
+  <script src="/roster/assets/app.js"></script>
 </body>
 </html>

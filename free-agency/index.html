@@ -2,34 +2,44 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/roster/assets/manifest.json">
+  <link rel="icon" href="/roster/assets/icon.svg" type="image/svg+xml">
   <title>Your free agency · Roster</title>
+  <link rel="stylesheet" href="/roster/assets/app.css">
   <style>
-    :root { --bg: #000000; --bg-gradient: radial-gradient(120% 90% at 0% 0%, #1a2c04 0%, #0b1402 32%, transparent 62%), radial-gradient(120% 90% at 100% 100%, #1a2c04 0%, #0b1402 32%, transparent 62%); --panel: #0d0d0d; --line: #2a2a2a; --text: #ffffff; --muted: #a3a3a3; --accent: #a3ff12; color-scheme: dark; }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; background-color: var(--bg); background-image: var(--bg-gradient); background-attachment: fixed; color: var(--text);
-      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    }
-    .wrap { max-width: 900px; margin: 0 auto; padding: 0 16px 48px; }
-    header { padding: 20px 0 8px; }
-    .back { color: var(--accent); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
-    .back:hover { text-decoration: underline; }
-    h1 { font-size: clamp(1.8rem, 6vw, 2.5rem); font-weight: 900; line-height: 1.1; margin: 8px 0 4px; letter-spacing: -0.02em; }
-    .sub { color: var(--muted); margin: 0; }
+    :root { --panel: var(--surface); --accent: var(--lime); }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 16px 16px 24px; }
+    .sub { color: var(--muted); margin: 4px 0 0; font-size: 0.95rem; }
 
-    .filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 14px; }
-    .filters button {
-      font: inherit; font-weight: 700; font-size: 0.9rem; cursor: pointer;
-      padding: 6px 14px; border-radius: 999px; border: 2px solid var(--accent);
-      background: transparent; color: var(--accent);
+    /* Search and filters stay pinned under the app bar while the list scrolls. */
+    .tools {
+      position: sticky;
+      top: calc(var(--appbar-h) + var(--safe-top));
+      z-index: 20;
+      margin: 0 -16px 10px;
+      padding: 10px 16px 4px;
+      background: rgba(0, 0, 0, 0.82);
+      -webkit-backdrop-filter: blur(14px);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--line);
     }
-    .filters button[aria-pressed="true"] { background: var(--accent); color: #000; }
-    .filters button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-    .search { display: flex; gap: 8px; margin-top: 20px; }
+    .filters { display: flex; flex-wrap: nowrap; gap: 8px; margin: 10px 0 8px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .filters::-webkit-scrollbar { display: none; }
+    .filters button {
+      flex: none;
+      font: inherit; font-weight: 700; font-size: 0.88rem; cursor: pointer;
+      padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line-strong);
+      background: var(--surface-2); color: var(--text);
+    }
+    .filters button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--lime-text); }
+    .search { display: flex; gap: 8px; }
     .search input, .search select {
-      font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line);
-      border-radius: 8px; padding: 8px 12px; min-width: 0;
+      font: inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--line-strong);
+      border-radius: 12px; padding: 10px 12px; min-width: 0; min-height: 44px;
     }
     .search input { flex: 1 1 60%; }
     .search select { flex: 0 1 40%; }
@@ -38,13 +48,14 @@
     .avatar { overflow: hidden; }
     .avatar img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
     .filters.groups { margin-bottom: 8px; }
-    .filters.groups button { font-size: 0.95rem; padding: 8px 16px; }
+    .filters.groups button { font-size: 0.92rem; padding: 8px 16px; }
     #filters { margin-top: 0; }
-    #filters button { border-width: 1px; padding: 4px 12px; font-size: 0.85rem; }
+    #filters button { padding: 4px 12px; font-size: 0.82rem; background: transparent; }
+    #filters button[aria-pressed="true"] { background: var(--lime-dim); border-color: var(--accent); color: var(--accent); }
     #filters:empty { display: none; }
     .filters .n { font-weight: 500; opacity: 0.75; margin-left: 4px; }
 
-    .list { list-style: none; margin: 0; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    .list { list-style: none; margin: 0; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
     .head, .player { display: grid; grid-template-columns: 44px 48px 1fr 56px; align-items: center; gap: 12px; padding: 10px 14px; }
     .head { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--line); }
     .player + .player { border-top: 1px solid var(--line); }
@@ -67,19 +78,29 @@
 </head>
 <body>
   <script src="/roster/assets/auth.js"></script>
+  <header class="appbar">
+    <div class="appbar-inner">
+      <a class="icon-btn" href="../" data-back aria-label="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </a>
+      <p class="appbar-title">Free agency</p>
+      <span></span>
+    </div>
+  </header>
   <div class="wrap">
-    <header>
-      <a class="back" href="../">← Back to Roster</a>
+    <div class="page-head">
       <h1>Your free agency</h1>
       <p class="sub">Every player on an NFL 53-man roster, plus injured reserve<span id="updated"></span>.</p>
-    </header>
-
-    <div class="search">
-      <input id="q" type="search" placeholder="Search players" aria-label="Search players" autocomplete="off">
-      <select id="team" aria-label="NFL team"><option value="">All teams</option></select>
     </div>
-    <div class="filters groups" id="groups" role="group" aria-label="Filter by position group"></div>
-    <div class="filters" id="filters" role="group" aria-label="Filter by position"></div>
+
+    <div class="tools">
+      <div class="search">
+        <input id="q" type="search" placeholder="Search players" aria-label="Search players" autocomplete="off">
+        <select id="team" aria-label="NFL team"><option value="">All teams</option></select>
+      </div>
+      <div class="filters groups" id="groups" role="group" aria-label="Filter by position group"></div>
+      <div class="filters" id="filters" role="group" aria-label="Filter by position"></div>
+    </div>
 
     <p class="count" id="count" aria-live="polite"></p>
     <div class="list" role="table" aria-label="Free agents">
@@ -231,5 +252,6 @@
     render();
   })();
   </script>
+  <script src="/roster/assets/app.js"></script>
 </body>
 </html>

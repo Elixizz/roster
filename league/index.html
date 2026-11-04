@@ -2,102 +2,81 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/roster/assets/manifest.json">
+  <link rel="icon" href="/roster/assets/icon.svg" type="image/svg+xml">
   <title>League · Roster</title>
+  <link rel="stylesheet" href="/roster/assets/app.css">
   <style>
-    :root {
-      --bg: #000000;
-      --text: #ffffff;
-      --muted: #a3a3a3;
-      --lime: #a3ff12;
-      --lime-text: #000000;
-      --line: #2e2e34;
-      --panel: #0d0d0f;
-      --error: #ff6b6b;
-      color-scheme: dark;
-    }
-    * { box-sizing: border-box; }
-    [hidden] { display: none !important; }
-    html, body { margin: 0; padding: 0; min-height: 100%; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      padding: 16px 16px 48px;
-    }
-    main { max-width: 900px; margin: 0 auto; }
-    .back { font-weight: 600; color: var(--lime); text-decoration: none; font-size: 0.9rem; }
-    .back:hover { text-decoration: underline; }
-
-    .league-head { margin: 14px 0 18px; }
-    .league-head h1 { font-size: clamp(1.5rem, 5vw, 2.2rem); font-weight: 900; text-transform: uppercase; letter-spacing: 0.03em; margin: 0; }
-    .league-head p { margin: 4px 0 0; font-size: 0.9rem; color: var(--muted); }
-    .code { font-family: ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0.2em; color: var(--lime); }
-
-    .section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 24px 0 10px; }
-    .section-head h2 { margin: 0; font-size: 1rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: var(--lime); }
-    .section-head span { font-size: 0.85rem; color: var(--muted); }
-
-    .table-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
-    th, td { padding: 12px 14px; text-align: left; white-space: nowrap; }
-    th { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
-    td { border-bottom: 1px solid var(--line); }
-    tr:last-child td { border-bottom: none; }
-    td.rank, th.rank { width: 48px; color: var(--muted); }
-    td.num, th.num { text-align: right; }
-    td.team { font-weight: 700; }
-    td.owner { color: var(--muted); }
-    tbody tr { cursor: pointer; }
-    tbody tr:hover td { background: #141418; }
-    tbody tr:focus-visible { outline: 2px solid var(--lime); outline-offset: -2px; }
-    .team-link { color: var(--text); text-decoration: none; }
-    .team-link:hover { color: var(--lime); text-decoration: underline; }
-    tr.mine td.team::after { content: "You"; margin-left: 8px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--lime-text); background: var(--lime); padding: 2px 6px; border-radius: 6px; vertical-align: middle; }
-    .notice { color: var(--muted); margin: 40px 0; text-align: center; }
-    .note { font-size: 0.85rem; color: var(--muted); margin: 10px 0 0; }
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+    .stat { background: var(--surface-2); border-radius: 12px; padding: 10px 12px; }
+    .stat b { display: block; font-size: 1.25rem; font-weight: 800; }
+    .stat span { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
+    .stat .code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: 0.18em; color: var(--lime); font-size: 1.05rem; }
+    .rank { width: 28px; flex: none; text-align: center; font-weight: 800; color: var(--faint); font-variant-numeric: tabular-nums; }
+    .ui-row.mine .rank { color: var(--lime); }
+    .count { font-variant-numeric: tabular-nums; }
   </style>
 </head>
 <body>
   <script src="/roster/assets/auth.js"></script>
-  <main>
-    <a class="back" href="../">← Back to Roster</a>
+  <header class="appbar">
+    <div class="appbar-inner">
+      <a class="icon-btn" href="../" data-back aria-label="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </a>
+      <p class="appbar-title">League</p>
+      <span></span>
+    </div>
+  </header>
 
-    <p class="notice" id="empty" hidden>Pick a league on the home page first.</p>
+  <main class="page">
+    <div id="loading" aria-hidden="true">
+      <div class="ui-skeleton" style="height:130px"></div>
+      <div class="ui-skeleton"></div>
+      <div class="ui-skeleton"></div>
+    </div>
+
+    <div class="ui-empty" id="empty" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>
+      <h2>No league picked</h2>
+      <p id="empty-text">Pick or make a league on the home screen first.</p>
+      <a class="ui-btn primary" href="../">Go to home</a>
+    </div>
 
     <div id="league-body" hidden>
-      <header class="league-head">
-        <h1 id="league-title">League</h1>
-        <p>Invite code <span class="code" id="league-code"></span> · <span id="member-count"></span></p>
-      </header>
+      <div class="ui-card">
+        <div class="page-head" style="margin:0">
+          <h1 id="league-title">League</h1>
+        </div>
+        <div class="stats">
+          <div class="stat"><b id="member-count">0</b><span>Members</span></div>
+          <div class="stat"><b id="team-count">0</b><span>Teams</span></div>
+          <div class="stat"><b class="code" id="league-code"></b><span>Invite code</span></div>
+        </div>
+      </div>
 
-      <div class="section-head">
-        <h2>Teams</h2>
-        <span id="team-count"></span>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th class="rank">#</th>
-              <th>Team</th>
-              <th>Owner</th>
-              <th class="num">Players</th>
-            </tr>
-          </thead>
-          <tbody id="team-rows"></tbody>
-        </table>
-      </div>
-      <p class="note" id="unnamed-note" hidden></p>
+      <section class="ui-section">
+        <div class="ui-section-head">
+          <h2 class="ui-section-title">Teams</h2>
+          <span class="ui-section-meta">Players</span>
+        </div>
+        <ul class="ui-list" id="team-rows"></ul>
+        <p class="ui-note" id="unnamed-note" hidden></p>
+      </section>
     </div>
   </main>
   <script>
-    // ESPN-style league page: every team in the league in one table. Tap a row
-    // to open that team. Players are not assigned to teams yet, so each team
-    // shows 0 of 53 for now.
+    // League page: every team in the league in one list. Tap a team to open it.
+    // Players are not assigned to teams yet, so each team shows 0 of 53 for now.
     (function () {
       var KEY = "roster_league";
       var ROSTER_SIZE = 53;
+      var CHEVRON = '<svg class="ui-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+      var loading = document.getElementById("loading");
       var empty = document.getElementById("empty");
       var body = document.getElementById("league-body");
       var rows = document.getElementById("team-rows");
@@ -116,21 +95,23 @@
         });
       }
 
-      function cell(cls, text) {
-        var td = document.createElement("td");
-        if (cls) td.className = cls;
-        td.textContent = text;
-        return td;
+      function span(cls, text) {
+        var s = document.createElement("span");
+        s.className = cls;
+        s.textContent = text;
+        return s;
       }
 
-      function openTeam(id) {
-        location.href = "../team/?team=" + encodeURIComponent(id);
+      function showEmpty(text) {
+        loading.hidden = true;
+        empty.hidden = false;
+        if (text) document.getElementById("empty-text").textContent = text;
       }
 
       var leagueId = null;
       try { leagueId = localStorage.getItem(KEY); } catch (e) { leagueId = null; }
       if (!leagueId) {
-        empty.hidden = false;
+        showEmpty();
         return;
       }
 
@@ -148,27 +129,33 @@
 
         document.getElementById("league-title").textContent = league.name;
         document.getElementById("league-code").textContent = league.code;
-        document.getElementById("member-count").textContent = memberCount + (memberCount === 1 ? " member" : " members");
-        document.getElementById("team-count").textContent = teams.length + " named";
+        document.getElementById("member-count").textContent = memberCount;
+        document.getElementById("team-count").textContent = teams.length;
+        document.title = league.name + " · Roster";
 
         rows.textContent = "";
         teams.forEach(function (team, i) {
-          var tr = document.createElement("tr");
-          tr.tabIndex = 0;
-          if (me && team.user === me.id) tr.className = "mine";
-          tr.appendChild(cell("rank", String(i + 1)));
-
-          var name = cell("team", team.name);
-          tr.appendChild(name);
-          tr.appendChild(cell("owner", team.ownerName || "Owner"));
-          tr.appendChild(cell("num", "0 of " + ROSTER_SIZE));
-
-          tr.addEventListener("click", function () { openTeam(team.id); });
-          tr.addEventListener("keydown", function (event) {
-            if (event.key === "Enter") openTeam(team.id);
-          });
-          rows.appendChild(tr);
+          var mine = me && team.user === me.id;
+          var li = document.createElement("li");
+          var a = document.createElement("a");
+          a.className = "ui-row" + (mine ? " mine" : "");
+          a.href = "../team/?team=" + encodeURIComponent(team.id);
+          a.appendChild(span("rank", String(i + 1)));
+          var main = span("ui-row-main", "");
+          var title = span("ui-row-title", team.name);
+          if (mine) {
+            title.appendChild(document.createTextNode(" "));
+            title.appendChild(span("ui-badge", "You"));
+          }
+          main.appendChild(title);
+          main.appendChild(span("ui-row-sub", team.ownerName || "Owner"));
+          a.appendChild(main);
+          a.appendChild(span("ui-row-end count", "0/" + ROSTER_SIZE));
+          a.insertAdjacentHTML("beforeend", CHEVRON);
+          li.appendChild(a);
+          rows.appendChild(li);
         });
+        rows.hidden = teams.length === 0;
 
         var missing = memberCount - teams.length;
         var note = document.getElementById("unnamed-note");
@@ -177,12 +164,13 @@
           ? "One member hasn't named a team yet."
           : missing + " members haven't named a team yet.";
 
+        loading.hidden = true;
         body.hidden = false;
       }).catch(function (err) {
-        empty.hidden = false;
-        empty.textContent = err.message;
+        showEmpty(err.message);
       });
     })();
   </script>
+  <script src="/roster/assets/app.js"></script>
 </body>
 </html>

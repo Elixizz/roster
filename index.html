@@ -2,286 +2,255 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Roster">
+  <link rel="manifest" href="/roster/assets/manifest.json">
+  <link rel="icon" href="/roster/assets/icon.svg" type="image/svg+xml">
   <title>Roster · Your team, free agency</title>
   <meta name="description" content="Your team. Free agency.">
+  <link rel="stylesheet" href="/roster/assets/app.css">
   <style>
-    :root {
-      --bg: #000000; --bg-gradient: radial-gradient(120% 90% at 0% 0%, #1a2c04 0%, #0b1402 32%, transparent 62%), radial-gradient(120% 90% at 100% 100%, #1a2c04 0%, #0b1402 32%, transparent 62%);
-      --text: #ffffff;
-      --lime: #a3ff12;
-      --lime-text: #000000;
-      color-scheme: dark;
-    }
+    .eyebrow { margin: 0 0 2px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--lime); }
+    .league-hero h1 { margin: 0; font-size: clamp(1.5rem, 6vw, 2rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; overflow-wrap: anywhere; }
+    .invite { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); border: 1px dashed var(--line-strong); }
+    .invite-label { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+    .invite-code { display: block; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 1.35rem; font-weight: 800; letter-spacing: 0.28em; color: var(--lime); }
+    #sync-btn.spinning svg { animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; min-height: 100%; }
-    body {
-      background-color: var(--bg); background-image: var(--bg-gradient); background-attachment: fixed;
-      color: var(--text);
-      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    .site-header {
-      padding: 20px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
-    .sync-btn {
-      font: inherit;
-      font-size: 0.9rem;
-      font-weight: 700;
-      padding: 8px 14px;
-      border-radius: 8px;
-      border: 1px solid var(--text);
-      background: transparent;
-      color: var(--text);
-      cursor: pointer;
-    }
-    .sync-btn:hover { border-color: var(--lime); color: var(--lime); }
-    .sync-btn:disabled { opacity: 0.5; cursor: default; }
-    .sync-status { font-size: 0.8rem; color: var(--text); opacity: 0.7; }
-    .site-header h1 {
-      margin: 0;
-      font-size: 2.25rem;
-      font-weight: 900;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--text);
-    }
-    main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 24px 16px 32px;
-    }
-    .content { max-width: 560px; width: 100%; }
-    .btn {
-      display: block;
-      padding: 14px 20px;
-      border-radius: 10px;
-      border: 1px solid transparent;
-      text-decoration: none;
-      font-weight: 600;
-    }
-    .hero-buttons {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 12px;
-    }
-    .hero-buttons .btn { flex: 0 0 calc(50% - 6px); }
-    .btn.hero {
-      background: var(--lime);
-      color: var(--lime-text);
-      font-size: clamp(1.2rem, 4.5vw, 1.6rem);
-      font-weight: 700;
-      line-height: 1.2;
-      letter-spacing: -0.01em;
-      padding: 28px 16px;
-      border: 2px solid var(--lime);
-      border-radius: 14px;
-    }
-    .btn.hero:hover { filter: brightness(1.08); }
-    .btn.hero.outline {
-      background: transparent;
-      color: var(--lime);
-    }
-    .btn.hero.outline:hover { background: var(--lime); color: var(--lime-text); filter: none; }
-    .btn:focus-visible { outline: 3px solid var(--text); outline-offset: 3px; }
-    [hidden] { display: none !important; }
-    .section-title { font-size: 1.6rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; margin: 0 0 12px; }
-    .muted { color: var(--text); opacity: 0.7; margin: 0 0 18px; }
-    .league-list, .actions { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
-    .actions { margin-bottom: 0; }
-    .panel { display: flex; flex-direction: column; gap: 12px; margin: 16px 0 0; text-align: left; }
-    .panel label { display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; opacity: 0.8; }
-    .panel input { font: inherit; color: var(--text); background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
-    .panel input:focus { outline: 2px solid var(--lime); outline-offset: 1px; }
-    .code-input { text-transform: uppercase; letter-spacing: 0.3em; font-weight: 700; }
-    .code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 1.2rem; letter-spacing: 0.2em; color: var(--lime); }
-    .msg { min-height: 1.5em; margin: 12px 0 0; font-size: 0.9rem; color: #ff6b6b; }
-    .link { font: inherit; background: none; border: none; color: var(--lime); cursor: pointer; padding: 16px 0 0; }
-    .teams { margin: 0 0 24px; text-align: left; }
-    .sub-title { font-size: 1.1rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; margin: 0 0 12px; }
-    .team-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px; }
-    .team-card { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
-    .team-card h4 { margin: 0; font-size: 1rem; font-weight: 700; }
-    .team-card .owner { margin: 2px 0 8px; font-size: 0.85rem; opacity: 0.7; }
-    .team-card .players { margin: 0; font-size: 0.85rem; opacity: 0.6; }
-    @media (max-width: 420px) {
-      .hero-buttons .btn { flex-basis: 100%; }
-    }
-    /* NFL scores */
-    /* Scores bar: full width, flush against the bottom of the screen */
-    .scores {
-      width: 100%;
-      text-align: left;
-      padding: 14px 24px 16px;
-      background: rgba(0, 0, 0, 0.85);
-      -webkit-backdrop-filter: blur(8px);
-      backdrop-filter: blur(8px);
-      border-top: 1px solid #22300c;
-      /* Stays pinned to the bottom of the screen while the page scrolls */
-      position: sticky;
-      bottom: 0;
-      z-index: 10;
-    }
-    .scores-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-    .scores-head h2 { margin: 0; font-size: 1.25rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
-    .scores-updated { font-size: 0.8rem; opacity: 0.6; }
-    /* Scores scroll continuously from left to right. People can drag or swipe the
-       row; it only stops while being dragged. */
+    /* NFL scores: cards scroll continuously from left to right. People can drag
+       or swipe the row; it only stops while being dragged. */
+    .scores { margin-top: 28px; }
     .games {
       overflow: hidden;
       cursor: grab;
       touch-action: pan-y; /* vertical swipes still scroll the page */
       user-select: none;
       -webkit-user-select: none;
-      -webkit-mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
-      mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
+      -webkit-mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent);
+      mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent);
     }
     .games.dragging { cursor: grabbing; }
     .games:focus-visible { outline: 2px solid var(--lime); outline-offset: 4px; }
     .track { display: flex; gap: 12px; width: max-content; will-change: transform; }
     .track img { pointer-events: none; -webkit-user-drag: none; }
-    .game { flex: none; width: 240px; border: 1px solid #2a2a2a; border-radius: 12px; padding: 12px 14px; background: #0d0d0d; }
+    .game { flex: none; width: 240px; border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; background: var(--surface); }
     .game.live { border-color: var(--lime); }
-    .game-status { font-size: 0.8rem; opacity: 0.7; margin-bottom: 8px; display: flex; justify-content: space-between; gap: 8px; }
-    .game.live .game-status { color: var(--lime); opacity: 1; font-weight: 700; }
+    .game-status { font-size: 0.78rem; color: var(--muted); margin-bottom: 8px; display: flex; justify-content: space-between; gap: 8px; }
+    .game.live .game-status { color: var(--lime); font-weight: 700; }
     .team-row { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
     .team-row img { width: 26px; height: 26px; object-fit: contain; flex: none; }
-    .team-row .name { flex: 1; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .team-row .rec { font-size: 0.75rem; opacity: 0.55; font-weight: 400; margin-left: 4px; }
+    .team-row .name { flex: 1; font-weight: 650; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .team-row .rec { font-size: 0.75rem; color: var(--faint); font-weight: 400; margin-left: 4px; }
     .team-row .score { font-weight: 800; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
     .game.final .team-row.loser { opacity: 0.5; }
     .team-row .poss { color: var(--lime); font-size: 0.7rem; margin-left: 4px; }
-    .scores-msg { opacity: 0.7; font-size: 0.95rem; }
+    .scores-msg { color: var(--muted); font-size: 0.95rem; margin: 0 4px; }
 
-    /* Desktop: buttons in a single column, centered on the page */
-    @media (min-width: 768px) {
-      main { padding: 24px 24px 32px; }
-      .content { max-width: 360px; }
-      .hero-buttons { flex-direction: column; flex-wrap: nowrap; }
-      .hero-buttons .btn { flex: none; width: 100%; }
-      .btn.hero { font-size: 1.3rem; padding: 22px 16px; }
+    @media (min-width: 640px) {
+      .ui-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
   </style>
 </head>
 <body>
   <script src="/roster/assets/auth.js"></script>
-  <header class="site-header">
-    <h1>Roster</h1>
-    <div>
-      <button class="sync-btn" id="sync-btn" type="button">Sync</button>
-      <span class="sync-status" id="sync-status" role="status"></span>
+  <header class="appbar">
+    <div class="appbar-inner">
+      <span></span>
+      <p class="appbar-title brand">Roster</p>
+      <button class="icon-btn" id="sync-btn" type="button" aria-label="Sync from GitHub" title="Sync from GitHub">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.6-4.5L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.6 4.5L20 16"/><path d="M20 21v-5h-5"/></svg>
+      </button>
     </div>
   </header>
+  <div class="app-toast" id="sync-status" role="status" aria-live="polite"></div>
   <script>
     (function () {
       var btn = document.getElementById("sync-btn");
       var status = document.getElementById("sync-status");
+      var clearTimer;
+      function say(text, keep) {
+        clearTimeout(clearTimer);
+        status.textContent = text;
+        if (!keep) clearTimer = setTimeout(function () { status.textContent = ""; }, 3000);
+      }
       btn.addEventListener("click", function () {
         btn.disabled = true;
-        status.textContent = "Syncing...";
+        btn.classList.add("spinning");
+        say("Syncing...", true);
         fetch("api/sync", { method: "POST" })
           .then(function (res) {
             if (res.ok) {
-              status.textContent = "Synced. Reloading...";
+              say("Synced. Reloading...", true);
               setTimeout(function () { location.reload(); }, 800);
               return;
             }
-            status.textContent = res.status === 429
-              ? "Synced recently. Try again in a minute."
-              : "Sync failed.";
+            say(res.status === 429 ? "Synced recently. Try again in a minute." : "Sync failed.");
             btn.disabled = false;
+            btn.classList.remove("spinning");
           })
           .catch(function () {
-            status.textContent = "Sync failed.";
+            say("Sync failed.");
             btn.disabled = false;
+            btn.classList.remove("spinning");
           });
       });
     })();
   </script>
 
-  <main>
-    <div class="content">
-      <section id="league-picker" hidden>
-        <h2 class="section-title">Pick a league</h2>
-        <p class="muted" id="picker-empty" hidden>You're not in a league yet. Make one, or join with an invite code.</p>
-        <nav class="league-list" id="league-list"></nav>
-        <div class="actions">
-          <button class="btn hero outline" id="show-create" type="button">Make new league</button>
-          <button class="btn hero outline" id="show-join" type="button">Join with code</button>
-        </div>
-        <form class="panel" id="create-form" hidden>
-          <label>League name
-            <input id="league-name" type="text" maxlength="60" required>
-          </label>
-          <button class="btn hero" type="submit">Create league</button>
-        </form>
-        <form class="panel" id="join-form" hidden>
-          <label>Invite code
-            <input id="join-code" class="code-input" type="text" maxlength="6" minlength="6" autocomplete="off" required>
-          </label>
-          <button class="btn hero" type="submit">Join league</button>
-        </form>
-        <p class="msg" id="league-msg" role="alert"></p>
-      </section>
-
-      <section id="league-home" hidden>
-        <h2 class="section-title" id="league-title"></h2>
-        <p class="muted">Invite code: <strong class="code" id="league-code"></strong><br>Share it so others can join.</p>
-        <div class="teams">
-          <h3 class="sub-title">Teams</h3>
-          <div class="team-list" id="team-list"></div>
-          <p class="muted" id="unnamed-note" hidden></p>
-          <form class="panel" id="team-form" hidden>
-            <label>Your team name
-              <input id="team-name" type="text" maxlength="40" required>
-            </label>
-            <button class="btn hero" type="submit">Save team name</button>
-          </form>
-          <p class="msg" id="team-msg" role="alert"></p>
-        </div>
-        <nav class="hero-buttons">
-          <a class="btn hero" href="team/">Your team</a>
-          <a class="btn hero outline" href="free-agency/">Your free agency</a>
-          <a class="btn hero outline" href="picks/">Draft picks</a>
-          <a class="btn hero outline" href="league/">View league</a>
-          <a class="btn hero outline" href="matchup/">View matchup</a>
-        </nav>
-        <button class="link" id="switch-league" type="button">Switch league</button>
-      </section>
+  <main class="page">
+    <div id="home-loading" aria-hidden="true">
+      <div class="ui-skeleton" style="height:140px"></div>
+      <div class="ui-skeleton"></div>
+      <div class="ui-skeleton"></div>
     </div>
 
+    <section id="league-picker" hidden>
+      <div class="page-head">
+        <h1>Your leagues</h1>
+        <p id="picker-sub">Pick a league to open it.</p>
+      </div>
+      <div class="ui-empty" id="picker-empty" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>
+        <h2>No leagues yet</h2>
+        <p>Make a league and invite people with its code, or join one with a code someone sent you.</p>
+      </div>
+      <ul class="ui-list" id="league-list"></ul>
+
+      <div class="ui-section">
+        <div class="ui-btn-row">
+          <button class="ui-btn" id="show-create" type="button">Make new league</button>
+          <button class="ui-btn" id="show-join" type="button">Join with code</button>
+        </div>
+        <form class="ui-card ui-form" id="create-form" style="margin-top:12px" hidden>
+          <label class="ui-field">League name
+            <input class="ui-input" id="league-name" type="text" maxlength="60" placeholder="Sunday dynasty" required>
+          </label>
+          <button class="ui-btn primary block" type="submit">Create league</button>
+        </form>
+        <form class="ui-card ui-form" id="join-form" style="margin-top:12px" hidden>
+          <label class="ui-field">Invite code
+            <input class="ui-input code" id="join-code" type="text" maxlength="6" minlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC123" required>
+          </label>
+          <button class="ui-btn primary block" type="submit">Join league</button>
+        </form>
+        <p class="ui-msg" id="league-msg" role="alert"></p>
+      </div>
+    </section>
+
+    <section id="league-home" hidden>
+      <div class="ui-card league-hero">
+        <p class="eyebrow">League</p>
+        <h1 id="league-title"></h1>
+        <div class="invite">
+          <div>
+            <span class="invite-label">Invite code</span>
+            <span class="invite-code" id="league-code"></span>
+          </div>
+          <button class="ui-btn small" id="copy-code" type="button">Copy</button>
+        </div>
+      </div>
+
+      <div class="ui-section">
+        <div class="ui-tiles">
+          <a class="ui-tile primary" href="team/">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 5.5 2.5 10l3 1.2V21h13v-9.8l3-1.2L20 5.5 16 3c-.6 1.6-2.2 2.6-4 2.6S8.6 4.6 8 3z"/></svg>
+            <span>Your team<small>Starters and roster</small></span>
+          </a>
+          <a class="ui-tile" href="league/">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>
+            <span>League<small>Every team</small></span>
+          </a>
+          <a class="ui-tile" href="free-agency/">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.3c2 .8 3.5 2.8 3.5 5.7"/></svg>
+            <span>Free agency<small>Every NFL player</small></span>
+          </a>
+          <a class="ui-tile" href="picks/">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M8 13h3M8 17h6"/></svg>
+            <span>Draft picks<small>Who owns what</small></span>
+          </a>
+          <a class="ui-tile" href="matchup/">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l7 7M4 4h4M4 4v4M20 4l-7 7M20 4h-4M20 4v4"/><path d="M8 16l-4 4M16 16l4 4M9 15l6-6"/></svg>
+            <span>Matchup<small>This week</small></span>
+          </a>
+          <a class="ui-tile" href="changes/">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            <span>Updates<small>What's changed</small></span>
+          </a>
+        </div>
+      </div>
+
+      <div class="ui-section">
+        <div class="ui-section-head">
+          <h2 class="ui-section-title">Teams</h2>
+          <span class="ui-section-meta" id="team-count"></span>
+        </div>
+        <ul class="ui-list" id="team-list"></ul>
+        <p class="ui-note" id="unnamed-note" hidden></p>
+      </div>
+
+      <div class="ui-section">
+        <form class="ui-card ui-form" id="team-form" hidden>
+          <label class="ui-field">Your team name
+            <input class="ui-input" id="team-name" type="text" maxlength="40" placeholder="Name your team" required>
+          </label>
+          <button class="ui-btn primary block" type="submit">Save team name</button>
+          <p class="ui-msg" id="team-msg" role="alert"></p>
+        </form>
+      </div>
+
+      <div class="ui-section" style="text-align:center">
+        <button class="ui-link" id="switch-league" type="button">Switch league</button>
+      </div>
+    </section>
+
+    <section class="scores" aria-labelledby="scores-title">
+      <div class="ui-section-head">
+        <h2 class="ui-section-title" id="scores-title">NFL scores</h2>
+        <span class="ui-section-meta" id="scores-updated"></span>
+      </div>
+      <div class="games" id="games" tabindex="0" role="region" aria-label="This week's NFL games. Drag, swipe, or use the arrow keys to move through them."><p class="scores-msg">Loading this week's games…</p></div>
+    </section>
   </main>
+
   <script>
     // League picker: choose a league, make a new one, or join one with a code.
     (function () {
       var LEAGUES = "/api/collections/roster_league_members/records?expand=league&perPage=100&sort=created";
       var KEY = "roster_league";
+      var CHEVRON = '<svg class="ui-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 
+      var loading = document.getElementById("home-loading");
       var picker = document.getElementById("league-picker");
       var home = document.getElementById("league-home");
       var list = document.getElementById("league-list");
       var empty = document.getElementById("picker-empty");
+      var pickerSub = document.getElementById("picker-sub");
       var createForm = document.getElementById("create-form");
       var joinForm = document.getElementById("join-form");
       var nameInput = document.getElementById("league-name");
       var codeInput = document.getElementById("join-code");
       var msg = document.getElementById("league-msg");
+      var toast = document.getElementById("sync-status");
+      var toastTimer;
+
+      function say(text) {
+        clearTimeout(toastTimer);
+        toast.textContent = text;
+        toastTimer = setTimeout(function () { toast.textContent = ""; }, 2500);
+      }
 
       function token() {
         var saved = window.rosterAuth && window.rosterAuth.current();
         return saved ? saved.token : "";
+      }
+
+      function myId() {
+        var saved = window.rosterAuth && window.rosterAuth.current();
+        return saved ? saved.id : "";
       }
 
       function api(path, method, body) {
@@ -309,22 +278,53 @@
         try { return localStorage.getItem(KEY); } catch (e) { return null; }
       }
 
+      function initials(text) {
+        var words = String(text || "").trim().split(/\s+/).filter(Boolean);
+        var out = words.slice(0, 2).map(function (w) { return w.charAt(0); }).join("");
+        return (out || "?").toUpperCase();
+      }
+
+      // One list row: avatar, title, subtitle, and an optional trailing note.
+      function row(tag, title, sub, end, lime) {
+        var el = document.createElement(tag);
+        el.className = "ui-row";
+        var avatar = document.createElement("span");
+        avatar.className = "ui-avatar" + (lime ? " lime" : "");
+        avatar.textContent = initials(title);
+        var main = document.createElement("span");
+        main.className = "ui-row-main";
+        var t = document.createElement("span");
+        t.className = "ui-row-title";
+        t.textContent = title;
+        var s = document.createElement("span");
+        s.className = "ui-row-sub";
+        s.textContent = sub;
+        main.appendChild(t);
+        main.appendChild(s);
+        el.appendChild(avatar);
+        el.appendChild(main);
+        if (end) {
+          var e = document.createElement("span");
+          e.className = "ui-row-end";
+          e.textContent = end;
+          el.appendChild(e);
+        }
+        el.insertAdjacentHTML("beforeend", CHEVRON);
+        return el;
+      }
+
       function showLeague(league) {
         saveChoice(league.id);
         document.getElementById("league-title").textContent = league.name;
         document.getElementById("league-code").textContent = league.code;
+        loading.hidden = true;
         picker.hidden = true;
         home.hidden = false;
+        window.scrollTo(0, 0);
         loadTeams(league.id);
       }
 
-      function myId() {
-        var saved = window.rosterAuth && window.rosterAuth.current();
-        return saved ? saved.id : "";
-      }
-
-      // Each team shows its name, its owner, and its players. Players are not
-      // assigned to teams yet, so every team shows "No players yet" for now.
+      // Each team shows its name and owner, and opens on the team page.
       function loadTeams(leagueId) {
         var teamList = document.getElementById("team-list");
         var teamForm = document.getElementById("team-form");
@@ -343,21 +343,14 @@
 
           teamList.textContent = "";
           teams.forEach(function (team) {
-            var card = document.createElement("div");
-            card.className = "team-card";
-            var name = document.createElement("h4");
-            name.textContent = team.name;
-            var owner = document.createElement("p");
-            owner.className = "owner";
-            owner.textContent = team.ownerName || "Owner";
-            var players = document.createElement("p");
-            players.className = "players";
-            players.textContent = "No players yet";
-            card.appendChild(name);
-            card.appendChild(owner);
-            card.appendChild(players);
-            teamList.appendChild(card);
+            var li = document.createElement("li");
+            var link = row("a", team.name, team.ownerName || "Owner", team.user === myId() ? "You" : "", team.user === myId());
+            link.href = "team/?team=" + encodeURIComponent(team.id);
+            li.appendChild(link);
+            teamList.appendChild(li);
           });
+          teamList.hidden = teams.length === 0;
+          document.getElementById("team-count").textContent = memberCount + (memberCount === 1 ? " member" : " members");
 
           var missing = memberCount - teams.length;
           unnamed.hidden = missing <= 0;
@@ -371,6 +364,7 @@
           teamMsg.textContent = "";
         }).catch(function (err) {
           document.getElementById("team-msg").textContent = err.message;
+          teamForm.hidden = false;
         });
       }
 
@@ -384,7 +378,7 @@
         var auth = window.rosterAuth && window.rosterAuth.current();
         var ownerName = auth && auth.name ? auth.name : "";
 
-        teamMsg.textContent = "Saving...";
+        teamMsg.textContent = "";
         var request = teamId
           ? api("/api/collections/roster_teams/records/" + teamId, "PATCH", { name: name })
           : api("/api/collections/roster_teams/records", "POST", {
@@ -392,26 +386,39 @@
             });
 
         request.then(function () {
-          teamMsg.textContent = "";
+          say("Team name saved");
           loadTeams(leagueId);
         }).catch(function (err) {
           teamMsg.textContent = err.message;
         });
       });
 
+      document.getElementById("copy-code").addEventListener("click", function () {
+        var code = document.getElementById("league-code").textContent;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(code).then(function () { say("Invite code copied"); },
+            function () { say("Code: " + code); });
+        } else {
+          say("Code: " + code);
+        }
+      });
+
       function showPicker(leagues) {
         saveChoice(null);
+        loading.hidden = true;
         home.hidden = true;
         picker.hidden = false;
         list.textContent = "";
+        list.hidden = leagues.length === 0;
         empty.hidden = leagues.length > 0;
+        pickerSub.hidden = leagues.length === 0;
         leagues.forEach(function (league) {
-          var btn = document.createElement("button");
+          var li = document.createElement("li");
+          var btn = row("button", league.name, "Invite code " + league.code, "", false);
           btn.type = "button";
-          btn.className = "btn hero outline";
-          btn.textContent = league.name;
           btn.addEventListener("click", function () { showLeague(league); });
-          list.appendChild(btn);
+          li.appendChild(btn);
+          list.appendChild(li);
         });
       }
 
@@ -421,33 +428,36 @@
         createForm.hidden = !createForm.hidden;
         joinForm.hidden = true;
         setMsg("");
+        if (!createForm.hidden) nameInput.focus();
       });
 
       document.getElementById("show-join").addEventListener("click", function () {
         joinForm.hidden = !joinForm.hidden;
         createForm.hidden = true;
         setMsg("");
+        if (!joinForm.hidden) codeInput.focus();
       });
 
       document.getElementById("switch-league").addEventListener("click", function () {
         api(LEAGUES).then(function (data) {
           showPicker(data.items.map(function (m) { return m.expand && m.expand.league; }).filter(Boolean));
-        }).catch(function (err) { setMsg(err.message); });
+          window.scrollTo(0, 0);
+        }).catch(function (err) { say(err.message); });
       });
 
       createForm.addEventListener("submit", function (event) {
         event.preventDefault();
-        setMsg("Creating league...");
+        setMsg("");
         api("/api/roster/leagues", "POST", { name: nameInput.value.trim() })
-          .then(function (data) { setMsg(""); showLeague(data.league); })
+          .then(function (data) { showLeague(data.league); say("League created"); })
           .catch(function (err) { setMsg(err.message); });
       });
 
       joinForm.addEventListener("submit", function (event) {
         event.preventDefault();
-        setMsg("Joining league...");
+        setMsg("");
         api("/api/roster/join", "POST", { code: codeInput.value.trim().toUpperCase() })
-          .then(function (data) { setMsg(""); showLeague(data.league); })
+          .then(function (data) { showLeague(data.league); say(data.alreadyMember ? "You're already in this league" : "Joined " + data.league.name); })
           .catch(function (err) { setMsg(err.message); });
       });
 
@@ -458,18 +468,12 @@
         if (current) showLeague(current);
         else showPicker(leagues);
       }).catch(function (err) {
+        loading.hidden = true;
         picker.hidden = false;
         setMsg(err.message);
       });
     })();
   </script>
-  <section class="scores" aria-labelledby="scores-title">
-    <div class="scores-head">
-      <h2 id="scores-title">NFL scores</h2>
-      <span class="scores-updated" id="scores-updated"></span>
-    </div>
-    <div class="games" id="games" tabindex="0" role="region" aria-label="This week's NFL games. Drag, swipe, or use the arrow keys to move through them."><p class="scores-msg">Loading this week's games…</p></div>
-  </section>
 
   <script>
     // This week's NFL games and scores, from ESPN's public scoreboard feed.
@@ -656,5 +660,6 @@
       load();
     })();
   </script>
+  <script src="/roster/assets/app.js"></script>
 </body>
 </html>
