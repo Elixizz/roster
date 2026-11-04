@@ -5,27 +5,134 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Your free agency · Roster</title>
   <style>
-    :root { --bg: #000000; --bg-gradient: radial-gradient(120% 90% at 0% 0%, #1a2c04 0%, #0b1402 32%, transparent 62%), radial-gradient(120% 90% at 100% 100%, #1a2c04 0%, #0b1402 32%, transparent 62%); --text: #ffffff; --muted: #a3a3a3; --accent: #a3ff12; color-scheme: dark; }
+    :root { --bg: #000000; --bg-gradient: radial-gradient(120% 90% at 0% 0%, #1a2c04 0%, #0b1402 32%, transparent 62%), radial-gradient(120% 90% at 100% 100%, #1a2c04 0%, #0b1402 32%, transparent 62%); --panel: #0d0d0d; --line: #2a2a2a; --text: #ffffff; --muted: #a3a3a3; --accent: #a3ff12; color-scheme: dark; }
     * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; }
     body {
-      background-color: var(--bg); background-image: var(--bg-gradient); background-attachment: fixed; color: var(--text);
+      margin: 0; background-color: var(--bg); background-image: var(--bg-gradient); background-attachment: fixed; color: var(--text);
       font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      display: flex; align-items: center; justify-content: center; padding: 24px 16px;
     }
-    main { text-align: center; max-width: 560px; width: 100%; }
-    h1 { font-size: clamp(2rem, 7vw, 3rem); font-weight: 900; line-height: 1.1; margin: 0 0 12px; letter-spacing: -0.02em; }
-    p { color: var(--muted); margin: 0 0 28px; }
-    a { color: var(--accent); text-decoration: none; font-weight: 600; }
-    a:hover { text-decoration: underline; }
+    .wrap { max-width: 900px; margin: 0 auto; padding: 0 16px 48px; }
+    header { padding: 20px 0 8px; }
+    .back { color: var(--accent); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .back:hover { text-decoration: underline; }
+    h1 { font-size: clamp(1.8rem, 6vw, 2.5rem); font-weight: 900; line-height: 1.1; margin: 8px 0 4px; letter-spacing: -0.02em; }
+    .sub { color: var(--muted); margin: 0; }
+
+    .filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 14px; }
+    .filters button {
+      font: inherit; font-weight: 700; font-size: 0.9rem; cursor: pointer;
+      padding: 6px 14px; border-radius: 999px; border: 2px solid var(--accent);
+      background: transparent; color: var(--accent);
+    }
+    .filters button[aria-pressed="true"] { background: var(--accent); color: #000; }
+    .filters button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    .filters .n { font-weight: 500; opacity: 0.75; margin-left: 4px; }
+
+    .list { list-style: none; margin: 0; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    .head, .player { display: grid; grid-template-columns: 44px 44px 1fr 64px 80px; align-items: center; gap: 12px; padding: 10px 14px; }
+    .head { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--line); }
+    .player + .player { border-top: 1px solid var(--line); }
+    .rank { color: var(--muted); font-weight: 700; text-align: right; }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; background: #1c1c1c; display: grid; place-items: center; color: #555; }
+    .avatar svg { width: 22px; height: 22px; }
+    .name { font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .name.empty { color: #555; font-weight: 500; font-style: italic; }
+    .team { display: block; color: var(--muted); font-size: 0.8rem; font-weight: 400; font-style: normal; }
+    .pos { justify-self: start; font-size: 0.75rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--accent); color: var(--accent); }
+    .pts { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .pts.empty { color: #555; }
+    .head .pts { font-weight: 400; }
+    .none { padding: 24px; color: var(--muted); text-align: center; }
+
+    @media (max-width: 480px) {
+      .head, .player { grid-template-columns: 28px 36px 1fr 48px 56px; gap: 8px; padding: 10px; }
+      .avatar { width: 34px; height: 34px; }
+    }
   </style>
 </head>
 <body>
   <script src="/roster/assets/auth.js"></script>
-  <main>
-    <h1>Your free agency</h1>
-    <p>Coming soon.</p>
-    <a href="../">← Back to Roster</a>
-  </main>
+  <div class="wrap">
+    <header>
+      <a class="back" href="../">← Back to Roster</a>
+      <h1>Your free agency</h1>
+      <p class="sub">Top-scoring available players.</p>
+    </header>
+
+    <div class="filters" id="filters" role="group" aria-label="Filter by position"></div>
+
+    <div class="list" role="table" aria-label="Free agents">
+      <div class="head" role="row">
+        <span class="rank" role="columnheader">#</span>
+        <span role="columnheader" aria-label="Photo"></span>
+        <span role="columnheader">Player</span>
+        <span role="columnheader">Pos</span>
+        <span class="pts" role="columnheader">Pts</span>
+      </div>
+      <ul id="players" style="list-style:none;margin:0;padding:0" role="rowgroup"></ul>
+    </div>
+  </div>
+
+  <script src="data/players.js"></script>
+  <script>
+  (function () {
+    var POSITIONS = ["ALL", "QB", "RB", "WR", "TE", "K", "DEF"];
+    var LABELS = { ALL: "All" };
+    var players = (window.FREE_AGENTS || []).slice();
+    var silhouette = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z"/></svg>';
+
+    function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return "&#" + c.charCodeAt(0) + ";"; }); }
+
+    // Highest points first; players without points go to the bottom.
+    players.sort(function (a, b) {
+      var pa = a.points == null ? -Infinity : a.points, pb = b.points == null ? -Infinity : b.points;
+      return pb - pa;
+    });
+
+    function current() {
+      var h = decodeURIComponent(location.hash.slice(1)).toUpperCase();
+      return POSITIONS.indexOf(h) >= 0 ? h : "ALL";
+    }
+
+    function renderFilters(active) {
+      document.getElementById("filters").innerHTML = POSITIONS.map(function (p) {
+        var n = p === "ALL" ? players.length : players.filter(function (x) { return x.pos === p; }).length;
+        return '<button type="button" data-pos="' + p + '" aria-pressed="' + (p === active) + '">' +
+          (LABELS[p] || p) + '<span class="n">' + n + '</span></button>';
+      }).join("");
+    }
+
+    function renderList(active) {
+      var list = players.filter(function (x) { return active === "ALL" || x.pos === active; });
+      var el = document.getElementById("players");
+      if (!list.length) { el.innerHTML = '<li class="none">No players at this position.</li>'; return; }
+      el.innerHTML = list.map(function (p, i) {
+        var hasName = p.name && p.name.trim();
+        var hasPts = p.points != null;
+        return '<li class="player" role="row">' +
+          '<span class="rank" role="cell">' + (i + 1) + '</span>' +
+          '<span class="avatar" role="cell">' + silhouette + '</span>' +
+          '<span class="name' + (hasName ? '' : ' empty') + '" role="cell">' +
+            (hasName ? esc(p.name) : 'Empty profile') +
+            '<span class="team">' + (p.team ? esc(p.team) : '—') + '</span></span>' +
+          '<span class="pos" role="cell">' + esc(p.pos) + '</span>' +
+          '<span class="pts' + (hasPts ? '' : ' empty') + '" role="cell">' + (hasPts ? Number(p.points).toFixed(1) : '—') + '</span>' +
+        '</li>';
+      }).join("");
+    }
+
+    function render() { var a = current(); renderFilters(a); renderList(a); }
+
+    document.getElementById("filters").addEventListener("click", function (e) {
+      var b = e.target.closest("button[data-pos]");
+      if (!b) return;
+      var p = b.getAttribute("data-pos");
+      history.replaceState(null, "", p === "ALL" ? location.pathname + location.search : "#" + p.toLowerCase());
+      render();
+    });
+    window.addEventListener("hashchange", render);
+    render();
+  })();
+  </script>
 </body>
 </html>
