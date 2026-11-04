@@ -39,6 +39,11 @@
     .track img { pointer-events: none; -webkit-user-drag: none; }
     .game { flex: none; width: 240px; border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; background: var(--surface); }
     .game.live { border-color: var(--lime); }
+    /* Winning (or, during a game, leading) team's color fades down from the top. */
+    .game.leader {
+      background: linear-gradient(180deg, var(--win) 0%, var(--surface) 85%);
+      background: linear-gradient(180deg, color-mix(in srgb, var(--win) 60%, var(--surface)) 0%, color-mix(in srgb, var(--win) 18%, var(--surface)) 45%, var(--surface) 90%);
+    }
     .game-status { font-size: 0.78rem; color: var(--muted); margin-bottom: 8px; display: flex; justify-content: space-between; gap: 8px; }
     .game.live .game-status { color: var(--lime); font-weight: 700; }
     .team-row { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
@@ -512,6 +517,29 @@
           "</div>";
       }
 
+      // Team's primary color as #rrggbb. If it's nearly black (it would vanish
+      // against the dark card), use the team's alternate color instead.
+      function teamColor(t) {
+        function ok(h) { return typeof h === "string" && /^[0-9a-f]{6}$/i.test(h); }
+        function lum(h) {
+          return [0, 2, 4].map(function (i) { return parseInt(h.substr(i, 2), 16) / 255; })
+            .reduce(function (sum, v, i) { return sum + v * [0.2126, 0.7152, 0.0722][i]; }, 0);
+        }
+        var c = ok(t.color) ? t.color : null;
+        if ((!c || lum(c) < 0.08) && ok(t.alternateColor) && lum(t.alternateColor) >= 0.08) c = t.alternateColor;
+        return c ? "#" + c : null;
+      }
+
+      // Final: the winner. Live: whoever is ahead. Not started or tied: nobody.
+      function leaderOf(state, away, home) {
+        if (state === "post") return away.winner ? away : home.winner ? home : null;
+        if (state === "in") {
+          var a = Number(away.score), h = Number(home.score);
+          return a > h ? away : h > a ? home : null;
+        }
+        return null;
+      }
+
       function render(data) {
         var events = (data.events || []).slice().sort(function (a, b) { return new Date(a.date) - new Date(b.date); });
         var week = data.week && data.week.number;
@@ -538,7 +566,9 @@
           var right = st.state === "pre" ? tv : (st.state === "in" && comp.situation && comp.situation.downDistanceText) || "";
           var poss = st.state === "in" && comp.situation ? comp.situation.possession : null;
           var cls = st.state === "in" ? " live" : st.state === "post" ? " final" : "";
-          return '<article class="game' + cls + '">' +
+          var lead = leaderOf(st.state, away, home);
+          var win = lead && teamColor(lead.team || {});
+          return '<article class="game' + cls + (win ? ' leader" style="--win:' + win : "") + '">' +
             '<div class="game-status"><span>' + esc(left) + "</span><span>" + esc(right) + "</span></div>" +
             teamRow(away, game, poss) + teamRow(home, game, poss) +
             "</article>";
