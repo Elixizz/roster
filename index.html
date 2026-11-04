@@ -99,6 +99,40 @@
     @media (max-width: 420px) {
       .hero-buttons .btn { flex-basis: 100%; }
     }
+    /* NFL scores */
+    .scores { width: 100%; margin-top: 40px; text-align: left; }
+    .scores-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .scores-head h2 { margin: 0; font-size: 1.25rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
+    .scores-updated { font-size: 0.8rem; opacity: 0.6; }
+    /* Scores scroll continuously from left to right; hovering pauses them. */
+    .games {
+      overflow: hidden;
+      -webkit-mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
+      mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
+    }
+    .track { display: flex; gap: 12px; width: max-content; animation: scroll-right var(--duration, 40s) linear infinite; }
+    .games:hover .track, .games:focus-within .track { animation-play-state: paused; }
+    @keyframes scroll-right {
+      from { transform: translateX(calc(-50% - 6px)); }
+      to { transform: translateX(0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .games { overflow-x: auto; }
+      .track { animation: none; }
+    }
+    .game { flex: none; width: 240px; border: 1px solid #2a2a2a; border-radius: 12px; padding: 12px 14px; background: #0d0d0d; }
+    .game.live { border-color: var(--lime); }
+    .game-status { font-size: 0.8rem; opacity: 0.7; margin-bottom: 8px; display: flex; justify-content: space-between; gap: 8px; }
+    .game.live .game-status { color: var(--lime); opacity: 1; font-weight: 700; }
+    .team-row { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
+    .team-row img { width: 26px; height: 26px; object-fit: contain; flex: none; }
+    .team-row .name { flex: 1; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .team-row .rec { font-size: 0.75rem; opacity: 0.55; font-weight: 400; margin-left: 4px; }
+    .team-row .score { font-weight: 800; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+    .game.final .team-row.loser { opacity: 0.5; }
+    .team-row .poss { color: var(--lime); font-size: 0.7rem; margin-left: 4px; }
+    .scores-msg { opacity: 0.7; font-size: 0.95rem; }
+
     /* Desktop: buttons in a single column down the left side */
     @media (min-width: 768px) {
       main {
@@ -110,6 +144,7 @@
       .hero-buttons { flex-direction: column; flex-wrap: nowrap; }
       .hero-buttons .btn { flex: none; width: 100%; }
       .btn.hero { font-size: 1.3rem; padding: 22px 16px; }
+      .scores { max-width: 1200px; }
     }
   </style>
 </head>
@@ -158,6 +193,136 @@
         <a class="btn hero outline" href="matchup/">View matchup</a>
       </nav>
     </div>
+
+    <section class="scores" aria-labelledby="scores-title">
+      <div class="scores-head">
+        <h2 id="scores-title">NFL scores</h2>
+        <span class="scores-updated" id="scores-updated"></span>
+      </div>
+      <div class="games" id="games"><p class="scores-msg">Loading this week's games…</p></div>
+    </section>
   </main>
+
+  <script>
+    // This week's NFL games and scores, from ESPN's public scoreboard feed.
+    // Refreshes every minute while games are live, every 10 minutes otherwise.
+    (function () {
+      var URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard";
+      var gamesEl = document.getElementById("games");
+      var titleEl = document.getElementById("scores-title");
+      var updatedEl = document.getElementById("scores-updated");
+      var timer;
+
+      function esc(s) {
+        return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+        });
+      }
+
+      function kickoff(iso) {
+        var d = new Date(iso);
+        return d.toLocaleDateString(undefined, { weekday: "short" }) + " " +
+          d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+      }
+
+      function teamRow(c, game, possessionId) {
+        var t = c.team || {};
+        var rec = c.records && c.records[0] ? c.records[0].summary : "";
+        var showScore = game.state !== "pre";
+        var loser = game.state === "post" && c.winner === false;
+        return '<div class="team-row' + (loser ? " loser" : "") + '">' +
+          (t.logo ? '<img src="' + esc(t.logo) + '" alt="" loading="lazy">' : "") +
+          '<span class="name">' + esc(t.shortDisplayName || t.displayName || t.abbreviation) +
+          (rec ? '<span class="rec">' + esc(rec) + "</span>" : "") +
+          (possessionId && possessionId === t.id ? '<span class="poss" title="Has the ball">●</span>' : "") +
+          "</span>" +
+          (showScore ? '<span class="score">' + esc(c.score) + "</span>" : "") +
+          "</div>";
+      }
+
+      function render(data) {
+        var events = (data.events || []).slice().sort(function (a, b) { return new Date(a.date) - new Date(b.date); });
+        var week = data.week && data.week.number;
+        var type = data.season && data.season.type;
+        titleEl.textContent = type === 3 ? "NFL playoffs" : type === 1 ? "NFL preseason" + (week ? " week " + week : "") : "NFL week " + (week || "");
+
+        if (!events.length) {
+          lastCards = "";
+          gamesEl.innerHTML = '<p class="scores-msg">No NFL games this week.</p>';
+          return false;
+        }
+
+        var anyLive = false;
+        var cards = events.map(function (e) {
+          var comp = (e.competitions || [])[0] || {};
+          var st = (e.status && e.status.type) || {};
+          var game = { state: st.state };
+          if (st.state === "in") anyLive = true;
+          var away = (comp.competitors || []).filter(function (c) { return c.homeAway === "away"; })[0];
+          var home = (comp.competitors || []).filter(function (c) { return c.homeAway === "home"; })[0];
+          if (!away || !home) return "";
+          var tv = comp.broadcasts && comp.broadcasts[0] && comp.broadcasts[0].names ? comp.broadcasts[0].names.join(", ") : "";
+          var left = st.state === "pre" ? kickoff(e.date) : (st.shortDetail || st.detail || "");
+          var right = st.state === "pre" ? tv : (st.state === "in" && comp.situation && comp.situation.downDistanceText) || "";
+          var poss = st.state === "in" && comp.situation ? comp.situation.possession : null;
+          var cls = st.state === "in" ? " live" : st.state === "post" ? " final" : "";
+          return '<article class="game' + cls + '">' +
+            '<div class="game-status"><span>' + esc(left) + "</span><span>" + esc(right) + "</span></div>" +
+            teamRow(away, game, poss) + teamRow(home, game, poss) +
+            "</article>";
+        }).join("");
+        lastCards = cards;
+        layoutTicker();
+        return anyLive;
+      }
+
+      // Repeat the games until one set fills the screen, then double it so the
+      // loop is seamless. The track slides right by exactly one set and starts over.
+      var lastCards = "";
+      var CARD_STEP = 252; // card width + gap
+      function layoutTicker() {
+        if (!lastCards) return;
+        var count = (lastCards.match(/<article/g) || []).length || 1;
+        var repeats = Math.max(1, Math.ceil(gamesEl.clientWidth / (count * CARD_STEP)));
+        var set = new Array(repeats + 1).join(lastCards);
+        var track = gamesEl.querySelector(".track");
+        if (!track) {
+          gamesEl.innerHTML = '<div class="track"></div>';
+          track = gamesEl.firstChild;
+        }
+        // Second copy is hidden from screen readers so each game is read once.
+        track.innerHTML = set + set.replace(/<article /g, '<article aria-hidden="true" ');
+        // Keep the speed steady (about 40px per second) however many games there are.
+        track.style.setProperty("--duration", Math.round((count * repeats * CARD_STEP) / 40) + "s");
+      }
+
+      var resizeTimer;
+      window.addEventListener("resize", function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(layoutTicker, 200);
+      });
+
+      function load() {
+        clearTimeout(timer);
+        fetch(URL, { cache: "no-store" })
+          .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+          .then(function (data) {
+            var live = render(data);
+            updatedEl.textContent = "Updated " + new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+            timer = setTimeout(load, live ? 60000 : 600000);
+          })
+          .catch(function () {
+            if (!gamesEl.querySelector(".game")) {
+              gamesEl.innerHTML = '<p class="scores-msg">Scores are unavailable right now. Try again in a few minutes.</p>';
+            }
+            timer = setTimeout(load, 120000);
+          });
+      }
+
+      // Refresh straight away when someone comes back to the tab.
+      document.addEventListener("visibilitychange", function () { if (!document.hidden) load(); });
+      load();
+    })();
+  </script>
 </body>
 </html>
