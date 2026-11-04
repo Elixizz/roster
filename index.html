@@ -96,6 +96,19 @@
     }
     .btn.hero.outline:hover { background: var(--lime); color: var(--lime-text); filter: none; }
     .btn:focus-visible { outline: 3px solid var(--text); outline-offset: 3px; }
+    [hidden] { display: none !important; }
+    .section-title { font-size: 1.6rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; margin: 0 0 12px; }
+    .muted { color: var(--text); opacity: 0.7; margin: 0 0 18px; }
+    .league-list, .actions { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+    .actions { margin-bottom: 0; }
+    .panel { display: flex; flex-direction: column; gap: 12px; margin: 16px 0 0; text-align: left; }
+    .panel label { display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; opacity: 0.8; }
+    .panel input { font: inherit; color: var(--text); background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+    .panel input:focus { outline: 2px solid var(--lime); outline-offset: 1px; }
+    .code-input { text-transform: uppercase; letter-spacing: 0.3em; font-weight: 700; }
+    .code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 1.2rem; letter-spacing: 0.2em; color: var(--lime); }
+    .msg { min-height: 1.5em; margin: 12px 0 0; font-size: 0.9rem; color: #ff6b6b; }
+    .link { font: inherit; background: none; border: none; color: var(--lime); cursor: pointer; padding: 16px 0 0; }
     @media (max-width: 420px) {
       .hero-buttons .btn { flex-basis: 100%; }
     }
@@ -197,16 +210,162 @@
 
   <main>
     <div class="content">
-      <nav class="hero-buttons">
-        <a class="btn hero" href="team/">Your team</a>
-        <a class="btn hero outline" href="free-agency/">Your free agency</a>
-        <a class="btn hero outline" href="picks/">Draft picks</a>
-        <a class="btn hero outline" href="league/">View league</a>
-        <a class="btn hero outline" href="matchup/">View matchup</a>
-      </nav>
+      <section id="league-picker" hidden>
+        <h2 class="section-title">Pick a league</h2>
+        <p class="muted" id="picker-empty" hidden>You're not in a league yet. Make one, or join with an invite code.</p>
+        <nav class="league-list" id="league-list"></nav>
+        <div class="actions">
+          <button class="btn hero outline" id="show-create" type="button">Make new league</button>
+          <button class="btn hero outline" id="show-join" type="button">Join with code</button>
+        </div>
+        <form class="panel" id="create-form" hidden>
+          <label>League name
+            <input id="league-name" type="text" maxlength="60" required>
+          </label>
+          <button class="btn hero" type="submit">Create league</button>
+        </form>
+        <form class="panel" id="join-form" hidden>
+          <label>Invite code
+            <input id="join-code" class="code-input" type="text" maxlength="6" minlength="6" autocomplete="off" required>
+          </label>
+          <button class="btn hero" type="submit">Join league</button>
+        </form>
+        <p class="msg" id="league-msg" role="alert"></p>
+      </section>
+
+      <section id="league-home" hidden>
+        <h2 class="section-title" id="league-title"></h2>
+        <p class="muted">Invite code: <strong class="code" id="league-code"></strong><br>Share it so others can join.</p>
+        <nav class="hero-buttons">
+          <a class="btn hero" href="team/">Your team</a>
+          <a class="btn hero outline" href="free-agency/">Your free agency</a>
+          <a class="btn hero outline" href="picks/">Draft picks</a>
+          <a class="btn hero outline" href="league/">View league</a>
+          <a class="btn hero outline" href="matchup/">View matchup</a>
+        </nav>
+        <button class="link" id="switch-league" type="button">Switch league</button>
+      </section>
     </div>
 
   </main>
+  <script>
+    // League picker: choose a league, make a new one, or join one with a code.
+    (function () {
+      var LEAGUES = "/api/collections/roster_league_members/records?expand=league&perPage=100&sort=created";
+      var KEY = "roster_league";
+
+      var picker = document.getElementById("league-picker");
+      var home = document.getElementById("league-home");
+      var list = document.getElementById("league-list");
+      var empty = document.getElementById("picker-empty");
+      var createForm = document.getElementById("create-form");
+      var joinForm = document.getElementById("join-form");
+      var nameInput = document.getElementById("league-name");
+      var codeInput = document.getElementById("join-code");
+      var msg = document.getElementById("league-msg");
+
+      function token() {
+        var saved = window.rosterAuth && window.rosterAuth.current();
+        return saved ? saved.token : "";
+      }
+
+      function api(path, method, body) {
+        var headers = { "Content-Type": "application/json", Authorization: token() };
+        return fetch(path, {
+          method: method || "GET",
+          headers: headers,
+          body: body ? JSON.stringify(body) : undefined
+        }).then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (data) {
+            if (!res.ok) throw new Error(data.message || "Something went wrong.");
+            return data;
+          });
+        });
+      }
+
+      function saveChoice(id) {
+        try {
+          if (id) localStorage.setItem(KEY, id);
+          else localStorage.removeItem(KEY);
+        } catch (e) { /* storage blocked: the picker just shows again */ }
+      }
+
+      function savedChoice() {
+        try { return localStorage.getItem(KEY); } catch (e) { return null; }
+      }
+
+      function showLeague(league) {
+        saveChoice(league.id);
+        document.getElementById("league-title").textContent = league.name;
+        document.getElementById("league-code").textContent = league.code;
+        picker.hidden = true;
+        home.hidden = false;
+      }
+
+      function showPicker(leagues) {
+        saveChoice(null);
+        home.hidden = true;
+        picker.hidden = false;
+        list.textContent = "";
+        empty.hidden = leagues.length > 0;
+        leagues.forEach(function (league) {
+          var btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "btn hero outline";
+          btn.textContent = league.name;
+          btn.addEventListener("click", function () { showLeague(league); });
+          list.appendChild(btn);
+        });
+      }
+
+      function setMsg(text) { msg.textContent = text || ""; }
+
+      document.getElementById("show-create").addEventListener("click", function () {
+        createForm.hidden = !createForm.hidden;
+        joinForm.hidden = true;
+        setMsg("");
+      });
+
+      document.getElementById("show-join").addEventListener("click", function () {
+        joinForm.hidden = !joinForm.hidden;
+        createForm.hidden = true;
+        setMsg("");
+      });
+
+      document.getElementById("switch-league").addEventListener("click", function () {
+        api(LEAGUES).then(function (data) {
+          showPicker(data.items.map(function (m) { return m.expand && m.expand.league; }).filter(Boolean));
+        }).catch(function (err) { setMsg(err.message); });
+      });
+
+      createForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+        setMsg("Creating league...");
+        api("/api/roster/leagues", "POST", { name: nameInput.value.trim() })
+          .then(function (data) { setMsg(""); showLeague(data.league); })
+          .catch(function (err) { setMsg(err.message); });
+      });
+
+      joinForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+        setMsg("Joining league...");
+        api("/api/roster/join", "POST", { code: codeInput.value.trim().toUpperCase() })
+          .then(function (data) { setMsg(""); showLeague(data.league); })
+          .catch(function (err) { setMsg(err.message); });
+      });
+
+      api(LEAGUES).then(function (data) {
+        var leagues = data.items.map(function (m) { return m.expand && m.expand.league; }).filter(Boolean);
+        var saved = savedChoice();
+        var current = leagues.filter(function (l) { return l.id === saved; })[0];
+        if (current) showLeague(current);
+        else showPicker(leagues);
+      }).catch(function (err) {
+        picker.hidden = false;
+        setMsg(err.message);
+      });
+    })();
+  </script>
   <section class="scores" aria-labelledby="scores-title">
     <div class="scores-head">
       <h2 id="scores-title">NFL scores</h2>
