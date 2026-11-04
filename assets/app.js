@@ -1,6 +1,7 @@
-// Shared app chrome for the roster site: the bottom tab bar and the back
-// button in the top app bar. Pages opt out of the tab bar with
-// <body data-no-tabs>.
+// Shared app chrome for the roster site: the bottom tab bar, the back button
+// in the top app bar, and the "draft is live" bar that shows on every page
+// while the picked league's draft is running. Pages opt out of the tab bar
+// with <body data-no-tabs>.
 (function () {
   "use strict";
 
@@ -9,16 +10,15 @@
     home: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
     team: '<path d="M8 3 4 5.5 2.5 10l3 1.2V21h13v-9.8l3-1.2L20 5.5 16 3c-.6 1.6-2.2 2.6-4 2.6S8.6 4.6 8 3z"/>',
     league: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
-    players: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.3c2 .8 3.5 2.8 3.5 5.7"/>',
-    picks: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M8 13h3M8 17h6"/>'
+    players: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.3c2 .8 3.5 2.8 3.5 5.7"/>'
   };
   var TABS = [
     { href: BASE, label: "Home", icon: "home", match: function (p) { return p === BASE || p === BASE + "index.html"; } },
     { href: BASE + "team/", label: "Team", icon: "team" },
     { href: BASE + "league/", label: "League", icon: "league" },
-    { href: BASE + "free-agency/", label: "Players", icon: "players" },
-    { href: BASE + "picks/", label: "Picks", icon: "picks" }
+    { href: BASE + "free-agency/", label: "Players", icon: "players" }
   ];
+  var DRAFT_POLL_MS = 30000;
 
   function svg(name) {
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[name] + "</svg>";
@@ -53,12 +53,114 @@
     });
   }
 
-  window.rosterApp = { icon: svg };
+  // ---------- Live draft bar ----------
+  // Shows under the top app bar on every page while the picked league's draft
+  // is live. The league owner also gets an End draft button in it.
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", function () { addTabbar(); wireBack(); });
-  } else {
+  function auth() {
+    return window.rosterAuth && window.rosterAuth.current();
+  }
+
+  function pickedLeague() {
+    try { return localStorage.getItem("roster_league"); } catch (e) { return null; }
+  }
+
+  function startedText(iso) {
+    var d = new Date(String(iso || "").replace(" ", "T"));
+    if (isNaN(d)) return "";
+    var mins = Math.max(0, Math.round((Date.now() - d.getTime()) / 60000));
+    if (mins < 1) return "Started just now";
+    if (mins < 60) return "Started " + mins + " min ago";
+    return "Started at " + d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  }
+
+  function draftAction(leagueId, action) {
+    var saved = auth();
+    return fetch("/api/roster/draft", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: saved ? saved.token : "" },
+      body: JSON.stringify({ league: leagueId, action: action })
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (json) {
+        if (!res.ok) throw new Error(json.message || "Something went wrong.");
+        return json;
+      });
+    });
+  }
+
+  function renderDraftBar(league) {
+    var bar = document.getElementById("draft-bar");
+    var live = league && league.draftStatus === "live";
+    if (!live) {
+      if (bar) bar.remove();
+      return;
+    }
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.id = "draft-bar";
+      bar.className = "draft-bar";
+      bar.setAttribute("role", "status");
+      var appbar = document.querySelector(".appbar");
+      if (appbar) appbar.insertAdjacentElement("afterend", bar);
+      else document.body.insertBefore(bar, document.body.firstChild);
+    }
+    var saved = auth();
+    var isOwner = saved && league.owner === saved.id;
+    bar.innerHTML = '<div class="draft-bar-inner">' +
+      '<span class="draft-dot" aria-hidden="true"></span>' +
+      '<span class="draft-text"><b>The draft is live</b><small></small></span>' +
+      (isOwner ? '<button type="button" class="draft-end">End draft</button>' : "") +
+      "</div>";
+    bar.querySelector("small").textContent = startedText(league.draftStartedAt);
+    var end = bar.querySelector(".draft-end");
+    if (end) {
+      end.addEventListener("click", function () {
+        if (!confirm("End the draft for everyone in the league?")) return;
+        end.disabled = true;
+        draftAction(league.id, "end").then(refreshDraft, function (err) {
+          end.disabled = false;
+          alert(err.message);
+        });
+      });
+    }
+  }
+
+  var draftListeners = [];
+  function refreshDraft() {
+    var saved = auth();
+    var id = pickedLeague();
+    if (!saved || !saved.token || !id || location.pathname.indexOf(BASE + "login/") === 0) {
+      renderDraftBar(null);
+      return Promise.resolve(null);
+    }
+    return fetch("/api/collections/roster_leagues/records/" + encodeURIComponent(id), {
+      headers: { Authorization: saved.token }
+    }).then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (league) {
+        renderDraftBar(league);
+        draftListeners.forEach(function (fn) { fn(league); });
+        return league;
+      }, function () { return null; });
+  }
+
+  window.rosterApp = {
+    icon: svg,
+    refreshDraft: refreshDraft,
+    draftAction: draftAction,
+    onDraft: function (fn) { draftListeners.push(fn); }
+  };
+
+  function start() {
     addTabbar();
     wireBack();
+    refreshDraft();
+    setInterval(function () { if (!document.hidden) refreshDraft(); }, DRAFT_POLL_MS);
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) refreshDraft(); });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start);
+  } else {
+    start();
   }
 })();

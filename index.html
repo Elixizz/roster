@@ -55,8 +55,13 @@
     .team-row .poss { color: var(--lime); font-size: 0.7rem; margin-left: 4px; }
     .scores-msg { color: var(--muted); font-size: 0.95rem; margin: 0 4px; }
 
+    .ui-tiles .ui-tile.primary { grid-column: 1 / -1; min-height: 88px; }
+    .draft-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
+    .draft-state { display: block; font-weight: 700; }
+    .draft-state.live { color: var(--lime); }
+
     @media (min-width: 640px) {
-      .ui-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .ui-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     }
   </style>
 </head>
@@ -159,6 +164,14 @@
         </div>
       </div>
 
+      <div class="ui-card draft-card" id="draft-card" hidden>
+        <div>
+          <span class="invite-label">Draft</span>
+          <span class="draft-state" id="draft-state">Not started</span>
+        </div>
+        <button class="ui-btn primary small" id="draft-btn" type="button">Start draft</button>
+      </div>
+
       <div class="ui-section">
         <div class="ui-tiles">
           <a class="ui-tile primary" href="team/">
@@ -172,10 +185,6 @@
           <a class="ui-tile" href="free-agency/">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.3c2 .8 3.5 2.8 3.5 5.7"/></svg>
             <span>Free agency<small>Every NFL player</small></span>
-          </a>
-          <a class="ui-tile" href="picks/">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M8 13h3M8 17h6"/></svg>
-            <span>Draft picks<small>Who owns what</small></span>
           </a>
           <a class="ui-tile" href="matchup/">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l7 7M4 4h4M4 4v4M20 4l-7 7M20 4h-4M20 4v4"/><path d="M8 16l-4 4M16 16l4 4M9 15l6-6"/></svg>
@@ -327,7 +336,47 @@
         home.hidden = false;
         window.scrollTo(0, 0);
         loadTeams(league.id);
+        setupDraft(league);
       }
+
+      // League owners start the draft here. While it's live, every page shows
+      // the draft bar (assets/app.js), which is also where the owner ends it.
+      var draftLeague = null;
+      function setupDraft(league) {
+        draftLeague = league;
+        var card = document.getElementById("draft-card");
+        card.hidden = league.owner !== myId();
+        if (!window.rosterApp) { setTimeout(function () { setupDraft(league); }, 100); return; }
+        window.rosterApp.refreshDraft();
+      }
+
+      function showDraftState(league) {
+        if (!league || !draftLeague || league.id !== draftLeague.id) return;
+        var state = document.getElementById("draft-state");
+        var btn = document.getElementById("draft-btn");
+        var live = league.draftStatus === "live";
+        state.textContent = live ? "Live now" : league.draftStatus === "done" ? "Finished" : "Not started";
+        state.classList.toggle("live", live);
+        btn.hidden = live;
+        btn.textContent = league.draftStatus === "done" ? "Restart draft" : "Start draft";
+        btn.disabled = false;
+      }
+
+      document.getElementById("draft-btn").addEventListener("click", function () {
+        var btn = this;
+        if (!draftLeague || !window.rosterApp) return;
+        if (!confirm("Start the draft? Everyone in the league will see it's live.")) return;
+        btn.disabled = true;
+        window.rosterApp.draftAction(draftLeague.id, "start")
+          .then(function () { say("The draft is live"); return window.rosterApp.refreshDraft(); })
+          .catch(function (err) { btn.disabled = false; say(err.message); });
+      });
+
+      function listenForDraft() {
+        if (!window.rosterApp) { setTimeout(listenForDraft, 100); return; }
+        window.rosterApp.onDraft(showDraftState);
+      }
+      listenForDraft();
 
       // Each team shows its name and owner, and opens on the team page.
       function loadTeams(leagueId) {
@@ -411,6 +460,8 @@
 
       function showPicker(leagues) {
         saveChoice(null);
+        draftLeague = null;
+        if (window.rosterApp) window.rosterApp.refreshDraft();
         loading.hidden = true;
         home.hidden = true;
         picker.hidden = false;

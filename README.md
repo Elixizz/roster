@@ -11,7 +11,6 @@ Roster is a static site (plain HTML, CSS, and JavaScript, no build step) that li
 | `index.html` | Home screen with the buttons and the **Sync** button |
 | `team/` | Your team |
 | `free-agency/` | Free agency |
-| `picks/` | Draft picks (`picks/data/league.js` holds the data) |
 | `league/` | League view |
 | `matchup/` | Matchup view |
 | `changes/` | Repo changes feed (commits from the repo) |
@@ -56,9 +55,9 @@ Commits to `main` go live after the next sync. To see a change right away, press
 
 Nothing you push to `main` is checked before it goes live, so make changes on a branch first.
 
-1. **Create a branch** from `main`, for example `edit/picks-week-3`.
+1. **Create a branch** from `main`, for example `edit/free-agency-names`.
 2. **Make the change** on that branch and commit it.
-3. **Check it locally.** Open the edited `.html` file in a browser. Pages that load data (like `picks/`) need `picks/data/league.js` to be valid JavaScript, so look for errors in the browser console (F12).
+3. **Check it locally.** Open the edited `.html` file in a browser. Pages that load data (like `free-agency/`) need `free-agency/data/players.js` to be valid JavaScript, so look for errors in the browser console (F12).
 4. **Open a pull request** into `main` and review the diff. Make sure only the files you meant to change are in it.
 5. **Merge the pull request.** The change is on `main` but not live yet.
 6. **Press Sync** on `lapistudios.com/roster/`. The page reloads with the new version.
@@ -66,7 +65,7 @@ Nothing you push to `main` is checked before it goes live, so make changes on a 
 ### Checking the live site
 
 After Sync:
-- Open the home page, then each page it links to (`team/`, `free-agency/`, `picks/`, `league/`, `matchup/`, `changes/`). Each should load with no blank areas.
+- Open the home page, then each page it links to (`team/`, `free-agency/`, `league/`, `matchup/`, `changes/`). Each should load with no blank areas.
 - Press **F12** and check the Console tab for red errors.
 - Hard-refresh with **Ctrl+F5** if you still see the old version. The site is set to not cache, but your browser may have kept an older copy.
 - If the page doesn't change, Sync may have failed. The button shows "Sync failed." when that happens, and the old copy stays live.
@@ -74,7 +73,7 @@ After Sync:
 ### Things to know
 
 - **Deleting a file on `main` does not delete it on the live site.** Sync copies files over the old ones but never removes them. To take a page down, replace it with a short message or remove the link to it, then tell whoever runs the server to clear the old file.
-- **Sync only copies these paths:** `index.html`, `changes/`, `free-agency/`, `league/`, `matchup/`, `picks/`, and `team/`. A new top-level folder will not go live until it is added to the sync script on the server.
+- **Sync only copies these paths:** `index.html`, `changes/`, `free-agency/`, `league/`, `matchup/`, `team/`, `login/`, and `assets/`. A new top-level folder will not go live until it is added to the sync script on the server.
 - **Don't edit `changes/data/changes.json` by hand.** The GitHub Action rewrites it every hour and after each push to `main`.
 - **Never commit secrets.** This repo is public, so anything committed is visible to everyone, including in its history. That includes API keys, tokens, passwords, and personal data.
 - **To undo a change,** open a pull request that reverts the commit on `main`, merge it, and press **Sync**.

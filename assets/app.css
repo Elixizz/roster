@@ -345,6 +345,49 @@ button.ui-row:active, a.ui-row:active { background: var(--surface-3); }
 }
 .app-toast:empty { display: none; }
 
+/* ---------- Live draft bar ---------- */
+.draft-bar {
+  position: sticky;
+  top: calc(var(--appbar-h) + var(--safe-top));
+  z-index: 25;
+  background: var(--lime);
+  color: var(--lime-text);
+}
+.draft-bar-inner {
+  max-width: 760px;
+  margin: 0 auto;
+  min-height: 48px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.draft-dot {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--lime-text);
+  animation: draft-pulse 1.4s ease-in-out infinite;
+}
+@keyframes draft-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.8); } }
+.draft-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+.draft-text b { font-weight: 800; }
+.draft-text small { font-size: 0.78rem; font-weight: 600; opacity: 0.75; }
+.draft-end {
+  flex: none;
+  min-height: 36px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 0;
+  background: var(--lime-text);
+  color: var(--lime);
+  font-weight: 800;
+  cursor: pointer;
+}
+.draft-end:disabled { opacity: 0.6; cursor: default; }
+@media (prefers-reduced-motion: reduce) { .draft-dot { animation: none; } }
+
 /* ---------- Bottom tab bar ---------- */
 .tabbar {
   position: fixed;
@@ -363,7 +406,7 @@ button.ui-row:active, a.ui-row:active { background: var(--surface-3); }
   margin: 0 auto;
   height: var(--tabbar-h);
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
 }
 .tab {
   display: flex;
@@ -382,7 +425,7 @@ button.ui-row:active, a.ui-row:active { background: var(--surface-3); }
 .tab[aria-current="page"] { color: var(--lime); }
 
 @media (min-width: 900px) {
-  .tabbar { left: 50%; right: auto; bottom: 16px; transform: translateX(-50%); width: 520px; border: 1px solid var(--line-strong); border-radius: 20px; padding-bottom: 0; }
+  .tabbar { left: 50%; right: auto; bottom: 16px; transform: translateX(-50%); width: 440px; border: 1px solid var(--line-strong); border-radius: 20px; padding-bottom: 0; }
   body.has-tabbar { padding-bottom: calc(var(--tabbar-h) + 40px); }
   .app-toast { bottom: calc(var(--tabbar-h) + 32px); }
 }
