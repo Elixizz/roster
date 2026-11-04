@@ -84,6 +84,8 @@ button, input, select, textarea { font: inherit; }
   font-size: 1.1rem;
 }
 .appbar-title.brand span { color: var(--lime); }
+.appbar-title.brand { display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
+.appbar-title.brand img { width: 28px; height: 28px; border-radius: 7px; flex: none; }
 .icon-btn {
   width: 44px;
   height: 44px;
