@@ -105,8 +105,14 @@
       width: 100%;
       text-align: left;
       padding: 14px 24px 16px;
-      background: rgba(0, 0, 0, 0.55);
+      background: rgba(0, 0, 0, 0.85);
+      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px);
       border-top: 1px solid #22300c;
+      /* Stays pinned to the bottom of the screen while the page scrolls */
+      position: sticky;
+      bottom: 0;
+      z-index: 10;
     }
     .scores-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
     .scores-head h2 { margin: 0; font-size: 1.25rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
