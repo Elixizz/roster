@@ -28,7 +28,7 @@
       .then(function (res) {
         if (!res.ok) { writeAuth(null); return false; }
         return res.json().then(function (data) {
-          writeAuth({ token: data.token, email: data.record.email, name: data.record.name || "" });
+          writeAuth({ token: data.token, id: data.record.id, email: data.record.email, name: data.record.name || "" });
           return true;
         });
       })

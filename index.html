@@ -109,6 +109,13 @@
     .code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 1.2rem; letter-spacing: 0.2em; color: var(--lime); }
     .msg { min-height: 1.5em; margin: 12px 0 0; font-size: 0.9rem; color: #ff6b6b; }
     .link { font: inherit; background: none; border: none; color: var(--lime); cursor: pointer; padding: 16px 0 0; }
+    .teams { margin: 0 0 24px; text-align: left; }
+    .sub-title { font-size: 1.1rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; margin: 0 0 12px; }
+    .team-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px; }
+    .team-card { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+    .team-card h4 { margin: 0; font-size: 1rem; font-weight: 700; }
+    .team-card .owner { margin: 2px 0 8px; font-size: 0.85rem; opacity: 0.7; }
+    .team-card .players { margin: 0; font-size: 0.85rem; opacity: 0.6; }
     @media (max-width: 420px) {
       .hero-buttons .btn { flex-basis: 100%; }
     }
@@ -236,6 +243,18 @@
       <section id="league-home" hidden>
         <h2 class="section-title" id="league-title"></h2>
         <p class="muted">Invite code: <strong class="code" id="league-code"></strong><br>Share it so others can join.</p>
+        <div class="teams">
+          <h3 class="sub-title">Teams</h3>
+          <div class="team-list" id="team-list"></div>
+          <p class="muted" id="unnamed-note" hidden></p>
+          <form class="panel" id="team-form" hidden>
+            <label>Your team name
+              <input id="team-name" type="text" maxlength="40" required>
+            </label>
+            <button class="btn hero" type="submit">Save team name</button>
+          </form>
+          <p class="msg" id="team-msg" role="alert"></p>
+        </div>
         <nav class="hero-buttons">
           <a class="btn hero" href="team/">Your team</a>
           <a class="btn hero outline" href="free-agency/">Your free agency</a>
@@ -300,7 +319,89 @@
         document.getElementById("league-code").textContent = league.code;
         picker.hidden = true;
         home.hidden = false;
+        loadTeams(league.id);
       }
+
+      function myId() {
+        var saved = window.rosterAuth && window.rosterAuth.current();
+        return saved ? saved.id : "";
+      }
+
+      // Each team shows its name, its owner, and its players. Players are not
+      // assigned to teams yet, so every team shows "No players yet" for now.
+      function loadTeams(leagueId) {
+        var teamList = document.getElementById("team-list");
+        var teamForm = document.getElementById("team-form");
+        var teamName = document.getElementById("team-name");
+        var teamMsg = document.getElementById("team-msg");
+        var unnamed = document.getElementById("unnamed-note");
+        var filter = encodeURIComponent('league="' + leagueId + '"');
+
+        Promise.all([
+          api("/api/collections/roster_teams/records?filter=" + filter + "&perPage=100&sort=created"),
+          api("/api/collections/roster_league_members/records?filter=" + filter + "&perPage=100")
+        ]).then(function (results) {
+          var teams = results[0].items;
+          var memberCount = results[1].totalItems;
+          var mine = teams.filter(function (t) { return t.user === myId(); })[0];
+
+          teamList.textContent = "";
+          teams.forEach(function (team) {
+            var card = document.createElement("div");
+            card.className = "team-card";
+            var name = document.createElement("h4");
+            name.textContent = team.name;
+            var owner = document.createElement("p");
+            owner.className = "owner";
+            owner.textContent = team.ownerName || "Owner";
+            var players = document.createElement("p");
+            players.className = "players";
+            players.textContent = "No players yet";
+            card.appendChild(name);
+            card.appendChild(owner);
+            card.appendChild(players);
+            teamList.appendChild(card);
+          });
+
+          var missing = memberCount - teams.length;
+          unnamed.hidden = missing <= 0;
+          unnamed.textContent = missing === 1
+            ? "One member hasn't named a team yet."
+            : missing + " members haven't named a team yet.";
+
+          teamForm.hidden = false;
+          teamName.value = mine ? mine.name : "";
+          teamForm.dataset.teamId = mine ? mine.id : "";
+          teamMsg.textContent = "";
+        }).catch(function (err) {
+          document.getElementById("team-msg").textContent = err.message;
+        });
+      }
+
+      document.getElementById("team-form").addEventListener("submit", function (event) {
+        event.preventDefault();
+        var form = event.currentTarget;
+        var teamMsg = document.getElementById("team-msg");
+        var name = document.getElementById("team-name").value.trim();
+        var leagueId = savedChoice();
+        var teamId = form.dataset.teamId;
+        var auth = window.rosterAuth && window.rosterAuth.current();
+        var ownerName = auth && auth.name ? auth.name : "";
+
+        teamMsg.textContent = "Saving...";
+        var request = teamId
+          ? api("/api/collections/roster_teams/records/" + teamId, "PATCH", { name: name })
+          : api("/api/collections/roster_teams/records", "POST", {
+              league: leagueId, user: myId(), name: name, ownerName: ownerName
+            });
+
+        request.then(function () {
+          teamMsg.textContent = "";
+          loadTeams(leagueId);
+        }).catch(function (err) {
+          teamMsg.textContent = err.message;
+        });
+      });
 
       function showPicker(leagues) {
         saveChoice(null);
