@@ -1,5 +1,5 @@
 :root {
-  --bg: #000000;
+  --bg: #000000; --bg-gradient: radial-gradient(120% 90% at 0% 0%, #1a2c04 0%, #0b1402 32%, transparent 62%), radial-gradient(70% 55% at 100% 100%, #0d1802 0%, transparent 65%);
   --panel: #0d0d0d;
   --text: #ffffff;
   --muted: #a3a3a3;
@@ -15,13 +15,13 @@
 body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  background: var(--bg);
+  background-color: var(--bg); background-image: var(--bg-gradient); background-attachment: fixed;
   color: var(--text);
   line-height: 1.4;
 }
 .wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
 
-.site-header { background: var(--bg); border-bottom: 1px solid var(--line); padding: 20px 0; }
+.site-header { background: transparent; border-bottom: 1px solid var(--line); padding: 20px 0; }
 .site-header h1 { margin: 0; font-size: 1.6rem; font-weight: 900; letter-spacing: 0.02em; }
 .back { display: inline-block; margin-bottom: 6px; color: var(--accent); text-decoration: none; font-size: 0.9rem; }
 .back:hover { text-decoration: underline; }
