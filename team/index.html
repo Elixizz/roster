@@ -244,7 +244,10 @@
         teams = data.items;
         var mineIndex = -1;
         teams.forEach(function (t, i) { if (me && t.user === me.id) mineIndex = i; });
-        index = mineIndex >= 0 ? mineIndex : 0;
+        var wanted = new URLSearchParams(location.search).get("team");
+        var pickedIndex = -1;
+        teams.forEach(function (t, i) { if (t.id === wanted) pickedIndex = i; });
+        index = pickedIndex >= 0 ? pickedIndex : (mineIndex >= 0 ? mineIndex : 0);
         body.hidden = false;
         renderTeam();
       }).catch(function (err) {
