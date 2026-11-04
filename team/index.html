@@ -57,6 +57,9 @@
     .groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; margin-top: 14px; }
     .group { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
     .group h3 { margin: 0 0 8px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; color: var(--lime); }
+    .unit { margin-top: 16px; }
+    .unit:first-child { margin-top: 0; }
+    .unit > h3 { margin: 0 0 8px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
     .group ul { list-style: none; margin: 0; padding: 0; }
     .group li { font-size: 0.92rem; color: var(--muted); padding: 3px 0; border-bottom: 1px solid var(--line); }
     .group li:last-child { border-bottom: none; }
@@ -94,7 +97,7 @@
           <h2>Starters</h2>
           <span id="starter-count"></span>
         </div>
-        <div class="slots" id="starters"></div>
+        <div id="starters"></div>
       </section>
 
       <section class="section">
@@ -103,7 +106,7 @@
           <span id="roster-count"></span>
         </div>
         <button type="button" class="more" id="more" aria-expanded="false" aria-controls="groups">More players</button>
-        <div class="groups" id="groups" hidden></div>
+        <div id="groups" hidden></div>
       </section>
 
       <section class="rename" id="rename" hidden>
@@ -123,11 +126,18 @@
     // teams yet, so every slot shows as empty until they are.
     (function () {
       var KEY = "roster_league";
+      // Starting lineup: 11 on offense, 11 on defense (4-3), and the specialists.
       var STARTERS = [
-        { pos: "QB", count: 1 }, { pos: "RB", count: 2 }, { pos: "WR", count: 3 },
-        { pos: "TE", count: 1 }, { pos: "FLEX", count: 1 }, { pos: "K", count: 1 }, { pos: "DEF", count: 1 }
+        { unit: "Offense", slots: ["QB", "RB", "WR", "WR", "WR", "TE", "LT", "LG", "C", "RG", "RT"] },
+        { unit: "Defense", slots: ["DE", "DT", "DT", "DE", "LB", "LB", "LB", "CB", "CB", "S", "S"] },
+        { unit: "Special teams", slots: ["K", "P", "LS"] }
       ];
-      var ROSTER_GROUPS = ["QB", "RB", "WR", "TE", "K", "DEF", "Bench"];
+      // Full roster positions, matching free-agency/data/players.js.
+      var ROSTER_GROUPS = [
+        { unit: "Offense", positions: ["QB", "RB", "WR", "TE", "C", "G", "T"] },
+        { unit: "Defense", positions: ["DE", "DT", "LB", "CB", "S"] },
+        { unit: "Special teams", positions: ["K", "P", "LS"] }
+      ];
       var TOTAL_ROSTER = 53;
 
       var empty = document.getElementById("empty");
@@ -172,30 +182,44 @@
         var starters = document.getElementById("starters");
         starters.textContent = "";
         var filled = 0;
-        STARTERS.forEach(function (slot) {
-          for (var i = 0; i < slot.count; i++) {
+        var total = 0;
+        STARTERS.forEach(function (unit) {
+          var block = el("div", "unit");
+          block.appendChild(el("h3", "", unit.unit));
+          var grid = el("div", "slots");
+          unit.slots.forEach(function (pos) {
             var card = el("div", "slot");
-            card.appendChild(el("div", "pos", slot.pos));
+            card.appendChild(el("div", "pos", pos));
             card.appendChild(el("p", "who", "Empty"));
-            starters.appendChild(card);
-          }
+            grid.appendChild(card);
+            total++;
+          });
+          block.appendChild(grid);
+          starters.appendChild(block);
         });
-        document.getElementById("starter-count").textContent = filled + " of " + STARTERS.reduce(function (n, s) { return n + s.count; }, 0) + " set";
+        document.getElementById("starter-count").textContent = filled + " of " + total + " set";
 
         var groups = document.getElementById("groups");
         groups.textContent = "";
-        ROSTER_GROUPS.forEach(function (group) {
-          var box = el("div", "group");
-          box.appendChild(el("h3", "", group));
-          var list = el("ul");
-          var inGroup = teamPlayers.filter(function (p) { return p.group === group; });
-          if (inGroup.length === 0) {
-            list.appendChild(el("li", "", "Empty"));
-          } else {
-            inGroup.forEach(function (p) { list.appendChild(el("li", "", p.name)); });
-          }
-          box.appendChild(list);
-          groups.appendChild(box);
+        ROSTER_GROUPS.forEach(function (unit) {
+          var block = el("div", "unit");
+          block.appendChild(el("h3", "", unit.unit));
+          var grid = el("div", "groups");
+          unit.positions.forEach(function (pos) {
+            var box = el("div", "group");
+            box.appendChild(el("h3", "", pos));
+            var list = el("ul");
+            var atPos = teamPlayers.filter(function (p) { return p.pos === pos; });
+            if (atPos.length === 0) {
+              list.appendChild(el("li", "", "Empty"));
+            } else {
+              atPos.forEach(function (p) { list.appendChild(el("li", "", p.name)); });
+            }
+            box.appendChild(list);
+            grid.appendChild(box);
+          });
+          block.appendChild(grid);
+          groups.appendChild(block);
         });
         document.getElementById("roster-count").textContent = teamPlayers.length + " of " + TOTAL_ROSTER + " players";
 
