@@ -134,7 +134,14 @@
       bottom: 0;
       z-index: 10;
     }
-    .scores-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .scores-head {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px;
+      max-height: 4rem; overflow: hidden;
+      transition: max-height 0.25s ease, margin-bottom 0.25s ease, opacity 0.2s ease;
+    }
+    /* The "NFL week #" heading only shows once you've scrolled to the bottom. */
+    .scores.compact .scores-head { max-height: 0; margin-bottom: 0; opacity: 0; }
+    @media (prefers-reduced-motion: reduce) { .scores-head { transition: none; } }
     .scores-head h2 { margin: 0; font-size: 1.25rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
     .scores-updated { font-size: 0.8rem; opacity: 0.6; }
     /* Scores scroll continuously from left to right. People can drag or swipe the
@@ -685,6 +692,29 @@
       document.addEventListener("visibilitychange", function () { if (!document.hidden) load(); });
       load();
     })();
+  </script>
+  <script>
+  // Hide the scores heading unless the page is scrolled to the bottom (or
+  // doesn't scroll at all). Hiding it makes the page shorter, so it only
+  // hides once you're well above the bottom, which stops it flickering.
+  (function () {
+    var bar = document.querySelector(".scores");
+    var head = bar && bar.querySelector(".scores-head");
+    if (!head) return;
+    var ticking = false;
+    function update() {
+      ticking = false;
+      var doc = document.documentElement;
+      var fromBottom = doc.scrollHeight - (window.scrollY + window.innerHeight);
+      if (fromBottom <= 4) bar.classList.remove("compact");
+      else if (fromBottom > head.scrollHeight + 40) bar.classList.add("compact");
+    }
+    function schedule() { if (!ticking) { ticking = true; requestAnimationFrame(update); } }
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    if (window.ResizeObserver) new ResizeObserver(schedule).observe(document.body);
+    update();
+  })();
   </script>
 </body>
 </html>
