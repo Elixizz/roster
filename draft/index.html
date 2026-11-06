@@ -128,7 +128,18 @@
       var KEY = "roster_league";
       var POLL_MS = 5000;
       var MAX_ROWS = 100;
-      var POSITIONS = ["QB", "RB", "WR", "TE", "C", "G", "T", "DE", "DT", "LB", "CB", "S", "K", "P", "LS"];
+      var POSITIONS = ["QB", "RB", "WR", "TE", "OL", "DE", "DT", "LB", "CB", "S", "K", "P", "LS"];
+      // Offensive linemen are drafted as a whole NFL team's O-line (id "OL|DEN"),
+      // the same way the server builds its list.
+      var LINEMEN = ["C", "G", "T"];
+      var NICKNAMES = {
+        ARI: "Cardinals", ATL: "Falcons", BAL: "Ravens", BUF: "Bills", CAR: "Panthers", CHI: "Bears",
+        CIN: "Bengals", CLE: "Browns", DAL: "Cowboys", DEN: "Broncos", DET: "Lions", GB: "Packers",
+        HOU: "Texans", IND: "Colts", JAX: "Jaguars", KC: "Chiefs", LA: "Rams", LAC: "Chargers",
+        LV: "Raiders", MIA: "Dolphins", MIN: "Vikings", NE: "Patriots", NO: "Saints", NYG: "Giants",
+        NYJ: "Jets", PHI: "Eagles", PIT: "Steelers", SEA: "Seahawks", SF: "49ers", TB: "Buccaneers",
+        TEN: "Titans", WAS: "Commanders"
+      };
 
       var leagueId = null;
       try { leagueId = localStorage.getItem(KEY); } catch (e) {}
@@ -137,13 +148,28 @@
 
       // Same id the server uses: ESPN id, or name|team when there isn't one.
       function playerKey(p) { return p.espn ? String(p.espn) : String(p.name || "") + "|" + String(p.team || ""); }
-      var players = (window.FREE_AGENTS || []).filter(function (p) { return p && p.name && !p.ir; }).map(function (p) {
-        return { id: playerKey(p), name: p.name, pos: p.pos, team: p.team, sort: lastFirst(p.name) };
+      var players = [];
+      var lines = {};
+      (window.FREE_AGENTS || []).forEach(function (p) {
+        if (!p || !p.name || p.ir) return;
+        if (LINEMEN.indexOf(p.pos) >= 0) {
+          if (!p.team) return;
+          var line = lines[p.team];
+          if (!line) {
+            var name = (NICKNAMES[p.team] || p.team) + " O-line";
+            line = lines[p.team] = { id: "OL|" + p.team, name: name, pos: "OL", team: p.team, sort: name.toLowerCase(), size: 0 };
+            players.push(line);
+          }
+          line.size++;
+          return;
+        }
+        players.push({ id: playerKey(p), name: p.name, pos: p.pos, team: p.team, sort: lastFirst(p.name) });
       });
       players.sort(function (a, b) { return POSITIONS.indexOf(a.pos) - POSITIONS.indexOf(b.pos) || (a.sort < b.sort ? -1 : 1); });
       var byId = {};
       players.forEach(function (p) { byId[p.id] = p; });
 
+      function subText(p) { return p.pos === "OL" ? (p.team + " · whole line, " + p.size + " linemen") : (p.team || ""); }
       function lastFirst(n) { var parts = String(n || "").split(" "); return (parts.slice(1).join(" ") + " " + parts[0]).toLowerCase(); }
       function fold(s) { return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
       function me() { return window.rosterAuth && window.rosterAuth.current(); }
@@ -266,7 +292,7 @@
           row.appendChild(el("span", "pos-pill", p.pos));
           var main = el("span", "ui-row-main");
           main.appendChild(el("span", "ui-row-title", p.name));
-          main.appendChild(el("span", "ui-row-sub", p.team || ""));
+          main.appendChild(el("span", "ui-row-sub", subText(p)));
           row.appendChild(main);
           var actions = el("span", "row-actions");
           var queued = queue.indexOf(p.id) >= 0;
@@ -331,7 +357,7 @@
           row.appendChild(el("span", "pos-pill", p.pos));
           var main = el("span", "ui-row-main");
           main.appendChild(el("span", "ui-row-title", p.name));
-          main.appendChild(el("span", "ui-row-sub", p.team || ""));
+          main.appendChild(el("span", "ui-row-sub", subText(p)));
           row.appendChild(main);
           var actions = el("span", "row-actions");
           [["↑", -1, "Move up"], ["↓", 1, "Move down"]].forEach(function (a) {

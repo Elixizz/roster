@@ -50,6 +50,7 @@ The `changes/` page reads that feed from `changes/data/changes.json`, which the 
 
 - The league owner starts the draft from the home screen and picks the time per pick (1 minute to 24 hours, 8 hours by default).
 - It is a 26-round snake draft in a random order. Anyone can be drafted at any position; the rest of each 53-man roster fills from free agency.
+- Offensive linemen are drafted as a whole NFL team's O-line (for example "Broncos O-line"), which fills the one O-line starter spot. Individual centers, guards, and tackles are not draftable.
 - While it is live, a bar under the top bar shows who is on the clock on every page and links to the draft room.
 - Only the member on the clock can pick (the owner can pick for them). If time runs out, the server drafts the first available player in that member's queue. With an empty queue the clock keeps running until the owner picks for them.
 - The owner can undo the last pick or end the draft from the draft room. Restarting clears every pick.

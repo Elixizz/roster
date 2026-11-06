@@ -12,11 +12,24 @@ const ROUNDS = 26;
 const PICK_SECONDS = [60, 300, 900, 3600, 14400, 28800, 86400];
 const DEFAULT_PICK_SECONDS = 28800;
 
+// Offensive linemen aren't drafted one by one: each NFL team's whole O-line
+// is a single pick, with the id "OL|DEN" and position "OL".
+const LINEMEN = ["C", "G", "T"];
+const NICKNAMES = {
+  ARI: "Cardinals", ATL: "Falcons", BAL: "Ravens", BUF: "Bills", CAR: "Panthers", CHI: "Bears",
+  CIN: "Bengals", CLE: "Browns", DAL: "Cowboys", DEN: "Broncos", DET: "Lions", GB: "Packers",
+  HOU: "Texans", IND: "Colts", JAX: "Jaguars", KC: "Chiefs", LA: "Rams", LAC: "Chargers",
+  LV: "Raiders", MIA: "Dolphins", MIN: "Vikings", NE: "Patriots", NO: "Saints", NYG: "Giants",
+  NYJ: "Jets", PHI: "Eagles", PIT: "Steelers", SEA: "Seahawks", SF: "49ers", TB: "Buccaneers",
+  TEN: "Titans", WAS: "Commanders"
+};
+
 function playerKey(p) {
   return p.espn ? String(p.espn) : String(p.name || "") + "|" + String(p.team || "");
 }
 
-// Map of player id -> { id, name, pos, team }.
+// Map of draftable id -> { id, name, pos, team }: every player except
+// offensive linemen, plus one O-line per NFL team.
 function loadPlayers() {
   const text = toString($os.readFile(PLAYERS_FILE));
   const start = text.indexOf("window.FREE_AGENTS = [");
@@ -27,6 +40,13 @@ function loadPlayers() {
   const byId = {};
   list.forEach((p) => {
     if (!p || !p.name || p.ir) return;
+    if (LINEMEN.indexOf(p.pos) >= 0) {
+      const id = "OL|" + p.team;
+      if (p.team && !byId[id]) {
+        byId[id] = { id: id, name: (NICKNAMES[p.team] || p.team) + " O-line", pos: "OL", team: p.team };
+      }
+      return;
+    }
     const id = playerKey(p);
     byId[id] = { id: id, name: p.name, pos: p.pos, team: p.team };
   });

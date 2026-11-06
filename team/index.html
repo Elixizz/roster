@@ -126,14 +126,15 @@
     // free agency fills the rest later.
     (function () {
       var KEY = "roster_league";
-      // Starting lineup: 11 on offense, 11 on defense (4-3), and the specialists.
+      // Starting lineup: QB, RB, 3 WR, TE, and one NFL team's whole O-line on
+      // offense, 11 on defense (4-3), and the specialists.
       var UNITS = [
-        { id: "offense", label: "Offense", starters: ["QB", "RB", "WR", "WR", "WR", "TE", "LT", "LG", "C", "RG", "RT"], positions: ["QB", "RB", "WR", "TE", "C", "G", "T"] },
+        { id: "offense", label: "Offense", starters: ["QB", "RB", "WR", "WR", "WR", "TE", "OL"], positions: ["QB", "RB", "WR", "TE", "OL"] },
         { id: "defense", label: "Defense", starters: ["DE", "DT", "DT", "DE", "LB", "LB", "LB", "CB", "CB", "S", "S"], positions: ["DE", "DT", "LB", "CB", "S"] },
         { id: "special", label: "Special teams", starters: ["K", "P", "LS"], positions: ["K", "P", "LS"] }
       ];
       var NAMES = { QB: "Quarterbacks", RB: "Running backs", WR: "Wide receivers", TE: "Tight ends",
-        C: "Centers", G: "Guards", T: "Tackles", DE: "Defensive ends", DT: "Defensive tackles",
+        OL: "Offensive line", DE: "Defensive ends", DT: "Defensive tackles",
         LB: "Linebackers", CB: "Cornerbacks", S: "Safeties", K: "Kickers", P: "Punters", LS: "Long snappers" };
       var TOTAL_ROSTER = 53;
 
@@ -145,7 +146,8 @@
       var unit = UNITS[0];
       var me = null;
       var players = []; // drafted players: { owner, name, pos, team }
-      var SLOT_POS = { LT: "T", RT: "T", LG: "G", RG: "G" };
+      // Linemen picked one by one before O-lines became a single pick count as O-line.
+      var LINEMEN = ["C", "G", "T"];
 
       function auth() { return window.rosterAuth && window.rosterAuth.current(); }
 
@@ -221,8 +223,7 @@
 
         var teamPlayers = players.filter(function (p) { return p.owner === team.user; });
 
-        // Fill starter slots with drafted players in draft order. Tackles fill
-        // LT and RT; guards fill LG and RG.
+        // Fill starter slots with drafted players in draft order.
         var used = {};
         var lineup = {};
         var filled = 0;
@@ -230,8 +231,7 @@
         UNITS.forEach(function (u) {
           lineup[u.id] = u.starters.map(function (slot) {
             totalStarters++;
-            var base = SLOT_POS[slot] || slot;
-            var p = teamPlayers.filter(function (x, i) { return !used[i] && x.pos === base; })[0];
+            var p = teamPlayers.filter(function (x, i) { return !used[i] && x.pos === slot; })[0];
             if (p) { used[teamPlayers.indexOf(p)] = true; filled++; }
             return p || null;
           });
@@ -326,7 +326,8 @@
       ]).then(function (results) {
         var data = results[0];
         players = results[1].items.map(function (p) {
-          return { owner: p.user, name: p.playerName, pos: p.playerPos, team: p.playerTeam };
+          var pos = LINEMEN.indexOf(p.playerPos) >= 0 ? "OL" : p.playerPos;
+          return { owner: p.user, name: p.playerName, pos: pos, team: p.playerTeam };
         });
         teams = data.items;
         if (!teams.length) {
